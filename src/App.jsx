@@ -1,0 +1,232 @@
+import "./App.css";
+import { useEffect, useState } from "react";
+import { db } from "./firebase";
+
+import {
+  collection,
+  getDocs,
+  deleteDoc,
+  doc,
+  updateDoc,
+  addDoc,
+} from "firebase/firestore";
+
+export default function App() {
+  const [members, setMembers] = useState([]);
+  const [search, setSearch] = useState("");
+  const [winner, setWinner] = useState("");
+  const [loser, setLoser] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [password, setPassword] = useState("");
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const loadMembers = async () => {
+    const snapshot = await getDocs(collection(db, "members"));
+    const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    setMembers(data);
+  };
+
+  useEffect(() => {
+    loadMembers();
+  }, []);
+
+  const login = () => {
+    if (password === "admin123") {
+      setIsAdmin(true);
+      setPassword("");
+    } else {
+      alert("비밀번호가 틀렸습니다");
+    }
+  };
+
+  const logout = () => setIsAdmin(false);
+
+  const deleteMember = async (id) => {
+    const ok = confirm("정말 삭제하시겠습니까?");
+    if (!ok) return;
+
+    await deleteDoc(doc(db, "members", id));
+    loadMembers();
+  };
+
+  const registerMatch = async () => {
+    if (!winner || !loser) {
+      alert("승자와 패자를 선택하세요");
+      return;
+    }
+    if (winner === loser) {
+      alert("같은 사람은 선택할 수 없습니다");
+      return;
+    }
+
+    const winnerMember = members.find((m) => m.id === winner);
+    const loserMember = members.find((m) => m.id === loser);
+    if (!winnerMember || !loserMember) {
+      alert("선수 정보를 불러오지 못했습니다");
+      return;
+    }
+
+    const winnerElo = winnerMember.elo || 1000;
+    const loserElo = loserMember.elo || 1000;
+    const K = 32;
+
+    const expectedWinner = 1 / (1 + Math.pow(10, (loserElo - winnerElo) / 400));
+    const expectedLoser = 1 / (1 + Math.pow(10, (winnerElo - loserElo) / 400));
+
+    const newWinnerElo = Math.round(winnerElo + K * (1 - expectedWinner));
+    const newLoserElo = Math.round(loserElo + K * (0 - expectedLoser));
+
+    setLoading(true);
+
+    try {
+      await updateDoc(doc(db, "members", winner), {
+        wins: (winnerMember.wins || 0) + 1,
+        elo: newWinnerElo,
+      });
+
+      await updateDoc(doc(db, "members", loser), {
+        losses: (loserMember.losses || 0) + 1,
+        elo: newLoserElo,
+      });
+
+      await addDoc(collection(db, "matches"), {
+        winner: winnerMember.nickname,
+        loser: loserMember.nickname,
+        date: new Date().toLocaleString(),
+      });
+
+      alert("경기 결과 등록 완료");
+      setWinner("");
+      setLoser("");
+      loadMembers();
+    } catch (err) {
+      console.error(err);
+      alert("경기 등록 중 오류가 발생했습니다");
+    }
+
+    setLoading(false);
+  };
+
+  const filteredMembers = members.filter((member) => (member.nickname || "").toLowerCase().includes(search.toLowerCase()));
+
+  const ranking = [...members].sort((a, b) => (b.elo || 1000) - (a.elo || 1000));
+
+  const winRateRanking = [...members]
+    .map((member) => {
+      const wins = member.wins || 0;
+      const losses = member.losses || 0;
+      const total = wins + losses;
+      return { ...member, winRate: total === 0 ? 0 : (wins / total) * 100 };
+    })
+    .filter((m) => (m.wins || 0) + (m.losses || 0) >= 5)
+    .sort((a, b) => b.winRate - a.winRate);
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#0f172a", color: "white", padding: "30px" }}>
+      <h1 style={{ textAlign: "center", fontSize: "48px" }}>THUG CLAN</h1>
+
+      {!isAdmin && (
+        <div style={{ marginBottom: "20px" }}>
+          <input
+            type="password"
+            placeholder="관리자 비밀번호"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            style={{ padding: "8px", borderRadius: "6px" }}
+          />
+          <button onClick={login} style={{ marginLeft: "10px", padding: "8px 12px" }}>
+            로그인
+          </button>
+        </div>
+      )}
+
+      {isAdmin && (
+        <div style={{ marginBottom: "20px" }}>
+          <strong>관리자 모드</strong>
+          <button onClick={logout} style={{ marginLeft: "10px" }}>
+            로그아웃
+          </button>
+        </div>
+      )}
+
+      <input
+        placeholder="닉네임 검색"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        style={{ width: "100%", padding: "12px", marginTop: "20px", marginBottom: "20px", borderRadius: "8px" }}
+      />
+
+      <h2>클랜원 수 : {filteredMembers.length}</h2>
+
+      <div style={{ marginBottom: "16px", marginTop: "8px" }}>
+        <h3>🏆 ELO TOP 10</h3>
+        {ranking.slice(0, 10).map((m, i) => (
+          <div key={m.id} style={{ marginBottom: "6px" }}>
+            {i + 1}위 - {m.nickname} : {m.elo || 1000}
+          </div>
+        ))}
+      </div>
+
+      <div style={{ marginBottom: "24px" }}>
+        <h3 style={{ marginTop: "8px" }}>🏅 클랜전 승률 TOP 5</h3>
+        {winRateRanking.slice(0, 5).map((m, i) => (
+          <div key={m.id} style={{ background: "#1e293b", padding: "10px", marginBottom: "8px", borderRadius: "8px" }}>
+            <strong>{i + 1}위</strong> - {m.nickname}
+            <div>승률: {m.winRate.toFixed(1)}% ({m.wins || 0}승 {m.losses || 0}패)</div>
+          </div>
+        ))}
+      </div>
+
+      {isAdmin && (
+        <div style={{ background: "#1e293b", padding: "20px", borderRadius: "12px", marginBottom: "24px" }}>
+          <h2>경기 결과 등록</h2>
+          <div style={{ marginBottom: "12px" }}>
+            <label style={{ marginRight: "8px" }}>승자</label>
+            <select value={winner} onChange={(e) => setWinner(e.target.value)} style={{ padding: "8px", borderRadius: "6px" }}>
+              <option value="">선택하세요</option>
+              {members.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.nickname}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ marginBottom: "12px" }}>
+            <label style={{ marginRight: "8px" }}>패자</label>
+            <select value={loser} onChange={(e) => setLoser(e.target.value)} style={{ padding: "8px", borderRadius: "6px" }}>
+              <option value="">선택하세요</option>
+              {members.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.nickname}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button onClick={registerMatch} disabled={loading} style={{ padding: "10px 20px", borderRadius: "8px" }}>
+            {loading ? "등록 중..." : "등록"}
+          </button>
+        </div>
+      )}
+
+      {filteredMembers.map((member) => (
+        <div key={member.id} style={{ background: "#1e293b", padding: "15px", marginBottom: "10px", borderRadius: "10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <h3>{member.nickname}</h3>
+            <div>종족 : {member.race}</div>
+            <div>티어 : {member.tier}</div>
+            <div>승 {member.wins || 0} 패 {member.losses || 0}</div>
+            <div>ELO : {member.elo || 1000}</div>
+          </div>
+
+          {isAdmin && (
+            <button onClick={() => deleteMember(member.id)} style={{ padding: "8px 14px", borderRadius: "8px" }}>
+              삭제
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}

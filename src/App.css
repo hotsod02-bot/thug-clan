@@ -1,0 +1,63 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: white;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.container {
+  max-width: 1200px;
+  margin: auto;
+  padding: 20px;
+}
+
+.member-card {
+  background: #1e293b;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.search-box {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+}
+
+.admin-btn {
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+
+  h1 {
+    font-size: 28px !important;
+  }
+
+  h2 {
+    font-size: 20px;
+  }
+
+  .member-card {
+    padding: 12px;
+  }
+
+  .search-box {
+    font-size: 16px;
+  }
+
+  select,
+  button,
+  input {
+    width: 100%;
+    margin-top: 8px;
+    padding: 12px;
+  }
+}
