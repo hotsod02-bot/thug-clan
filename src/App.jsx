@@ -106,39 +106,30 @@ export default function App() {
 
     setLoading(false);
   };
-const updateScore = async (id, type) => {
+
   const editNickname = async (member) => {
-  const newName = prompt(
-    "새 닉네임",
-    member.nickname
-  );
+    const newName = prompt("새 닉네임", member.nickname);
 
-  if (!newName) return;
+    if (!newName) return;
 
-  await updateDoc(
-    doc(db, "members", member.id),
-    {
+    await updateDoc(doc(db, "members", member.id), {
       nickname: newName,
-    }
-  );
+    });
 
-  loadMembers();
-};
-  const member = members.find((m) => m.id === id);
+    loadMembers();
+  };
 
-  await updateDoc(doc(db, "members", id), {
-    [type]: (member[type] || 0) + 1,
-  });
+  const updateScore = async (id, type) => {
+    const member = members.find((m) => m.id === id);
+    if (!member) return;
 
-  loadMembers();
-};
-<button
-  onClick={() =>
-    editNickname(member)
-  }
->
-  닉네임 수정
-</button>
+    await updateDoc(doc(db, "members", id), {
+      [type]: (member[type] || 0) + 1,
+    });
+
+    loadMembers();
+  };
+
   const filteredMembers = members.filter((member) => (member.nickname || "").toLowerCase().includes(search.toLowerCase()));
 
   const ranking = [...members].sort((a, b) => (b.elo || 1000) - (a.elo || 1000));
@@ -251,37 +242,46 @@ const updateScore = async (id, type) => {
             <div>승 {member.wins || 0} 패 {member.losses || 0}</div>
             <div>ELO : {member.elo || 1000}</div>
           </div>
-{isAdmin && (
-  <div
-    style={{
-      display: "flex",
-      gap: "6px",
-      flexWrap: "wrap",
-    }}
-  >
-    <button
-      onClick={() =>
-        updateScore(member.id, "wins")
-      }
-    >
-      승 +1
-    </button>
+          {isAdmin && (
+            <div
+              style={{
+                display: "flex",
+                gap: "6px",
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                onClick={() =>
+                  updateScore(member.id, "wins")
+                }
+              >
+                승 +1
+              </button>
 
-    <button
-      onClick={() =>
-        updateScore(member.id, "losses")
-      }
-    >
-      패 +1
-    </button>
-
-    <button
-      onClick={() =>
-        deleteMember(member.id)
-      }
-    >
-      삭제
-    </button>
-  </div>
-)}
+              <button
+                onClick={() =>
+                  updateScore(member.id, "losses")
+                }
+              >
+                패 +1
+              </button>
+              <button
+                onClick={() => editNickname(member)}
+              >
+                닉네임 수정
+              </button>
+              <button
+                onClick={() =>
+                  deleteMember(member.id)
+                }
+              >
+                삭제
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
 
