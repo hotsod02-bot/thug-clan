@@ -106,7 +106,39 @@ export default function App() {
 
     setLoading(false);
   };
+const updateScore = async (id, type) => {
+  const editNickname = async (member) => {
+  const newName = prompt(
+    "새 닉네임",
+    member.nickname
+  );
 
+  if (!newName) return;
+
+  await updateDoc(
+    doc(db, "members", member.id),
+    {
+      nickname: newName,
+    }
+  );
+
+  loadMembers();
+};
+  const member = members.find((m) => m.id === id);
+
+  await updateDoc(doc(db, "members", id), {
+    [type]: (member[type] || 0) + 1,
+  });
+
+  loadMembers();
+};
+<button
+  onClick={() =>
+    editNickname(member)
+  }
+>
+  닉네임 수정
+</button>
   const filteredMembers = members.filter((member) => (member.nickname || "").toLowerCase().includes(search.toLowerCase()));
 
   const ranking = [...members].sort((a, b) => (b.elo || 1000) - (a.elo || 1000));
@@ -122,7 +154,7 @@ export default function App() {
     .sort((a, b) => b.winRate - a.winRate);
 
   return (
-    <div style={{ minHeight: "100vh", background: "#0f172a", color: "white", padding: "30px" }}>
+  <div className="container">
       <h1 style={{ textAlign: "center", fontSize: "48px" }}>THUG CLAN</h1>
 
       {!isAdmin && (
@@ -219,14 +251,37 @@ export default function App() {
             <div>승 {member.wins || 0} 패 {member.losses || 0}</div>
             <div>ELO : {member.elo || 1000}</div>
           </div>
+{isAdmin && (
+  <div
+    style={{
+      display: "flex",
+      gap: "6px",
+      flexWrap: "wrap",
+    }}
+  >
+    <button
+      onClick={() =>
+        updateScore(member.id, "wins")
+      }
+    >
+      승 +1
+    </button>
 
-          {isAdmin && (
-            <button onClick={() => deleteMember(member.id)} style={{ padding: "8px 14px", borderRadius: "8px" }}>
-              삭제
-            </button>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
+    <button
+      onClick={() =>
+        updateScore(member.id, "losses")
+      }
+    >
+      패 +1
+    </button>
+
+    <button
+      onClick={() =>
+        deleteMember(member.id)
+      }
+    >
+      삭제
+    </button>
+  </div>
+)}
+
