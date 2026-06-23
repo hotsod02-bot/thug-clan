@@ -32,6 +32,16 @@ const loadPosts = async () => {
   }));
   setPosts(data.reverse());
 };
+const loadMembers = async () => {
+  const snapshot = await getDocs(collection(db, "members"));
+
+  const data = snapshot.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }));
+
+  setMembers(data);
+};
 const loadMatches = async () => {
   const snapshot = await getDocs(collection(db, "matches"));
 
