@@ -66,16 +66,21 @@ useEffect(() => {
     await deleteDoc(doc(db, "members", id));
     loadMembers();
   };
-  if (!postTitle) return alert("글 제목 입력");
 
+  const addPost = async () => {
+    if (!postTitle) return alert("글 제목 입력");
+
+const handleSubmit = async () => {
   await addDoc(collection(db, "posts"), {
     title: postTitle,
-    date: new Date().toLocaleString(),
+    createdAt: new Date().toLocaleString(),
   });
-
-  setPostTitle("");
-  loadPosts();
 };
+    setPostTitle("");
+    loadPosts();
+  };
+
+  const registerMatch = async () => {
     if (!winner || !loser) {
       alert("승자와 패자를 선택하세요");
       return;
@@ -121,12 +126,12 @@ useEffect(() => {
         date: new Date().toLocaleString(),
       });
 
-alert("경기 결과 등록 완료");
-setWinner("");
-setLoser("");
+      alert("경기 결과 등록 완료");
+      setWinner("");
+      setLoser("");
 
-loadMembers();
-loadMatches();
+      loadMembers();
+      loadMatches();
     } catch (err) {
       console.error(err);
       alert("경기 등록 중 오류가 발생했습니다");
@@ -367,3 +372,6 @@ loadMatches();
     ))}
   </div>
 )}
+    </div>
+  );
+}
