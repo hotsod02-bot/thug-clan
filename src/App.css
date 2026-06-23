@@ -42,22 +42,18 @@ box-shadow: 0 0 10px #3b82f6;
 }
 
 button {
-background: linear-gradient(
-135deg,
-#2563eb,
-#1d4ed8
-);
-border: none;
-color: white;
-padding: 10px 15px;
-border-radius: 8px;
-cursor: pointer;
-transition: 0.25s;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  border: none;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.25s;
 }
 
-button {
-transform: translateY(-2px);
-box-shadow: 0 0 15px #2563eb;
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 15px #2563eb;
 }
 
 .rank-card {
@@ -165,4 +161,150 @@ grid-template-columns: 1fr;
 .member-card {
 flex-direction: column;
 }
+}
+.navbar{
+  display:flex;
+  justify-content:center;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:20px;
+}
+
+.navbar button{
+  background:#0f172a;
+  color:white;
+  border:1px solid #2563eb;
+  padding:10px 20px;
+  border-radius:8px;
+  cursor:pointer;
+}
+
+.navbar button:hover{
+  background:#2563eb;
+}
+
+.notice-box{
+  background:#111827;
+  border:1px solid #2563eb;
+  padding:15px;
+  border-radius:10px;
+  margin-bottom:20px;
+  text-align:center;
+  font-weight:bold;
+}
+
+.schedule-box{
+  background:#111827;
+  border:1px solid #2563eb;
+  padding:20px;
+  border-radius:10px;
+  margin-bottom:20px;
+}
+
+.schedule-box h2{
+  margin-top:0;
+}.recent-match-box {
+  background: #111827;
+  border: 1px solid #2563eb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.recent-match-box div {
+  padding: 10px 0;
+  border-bottom: 1px solid #1e293b;
+}
+.members-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+/* THUG 감성 카드 */
+.thug-card {
+  background: linear-gradient(145deg, #0b1020, #0f1a33);
+  border: 1px solid rgba(77, 166, 255, 0.2);
+  border-radius: 14px;
+  padding: 16px;
+  position: relative;
+  box-shadow: 0 0 15px rgba(77, 166, 255, 0.1);
+  transition: 0.3s;
+}
+
+.thug-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0 25px rgba(77, 166, 255, 0.3);
+}
+
+/* 랭킹 번호 */
+.rank-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: #4da6ff;
+  color: black;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: bold;
+}
+
+/* 닉네임 */
+.nickname {
+  color: #4da6ff;
+  font-size: 18px;
+  text-shadow: 0 0 8px #4da6ff;
+}
+
+/* 메타 정보 */
+.meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  opacity: 0.8;
+  margin: 8px 0;
+}
+
+/* 승패 */
+.stats {
+  display: flex;
+  justify-content: space-between;
+  margin: 10px 0;
+}
+
+/* ELO 강조 */
+.elo {
+  font-size: 16px;
+  font-weight: bold;
+  color: #00d4ff;
+  text-shadow: 0 0 10px #00d4ff;
+}
+
+/* 관리자 버튼 */
+.admin-buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.admin-buttons button {
+  background: #1e293b;
+  border: 1px solid #4da6ff;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.admin-buttons button:hover {
+  background: #4da6ff;
+  color: black;
+}
+.navbar button.active {
+  background: #4da6ff;
+  color: black;
+  box-shadow: 0 0 12px #4da6ff;
 }

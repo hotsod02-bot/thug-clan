@@ -18,17 +18,35 @@ export default function App() {
   const [loser, setLoser] = useState("");
   const [loading, setLoading] = useState(false);
   const [password, setPassword] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
+const [isAdmin, setIsAdmin] = useState(false);
+const [matches, setMatches] = useState([]);
+const [page, setPage] = useState("home");
+const [posts, setPosts] = useState([]);
+const [postTitle, setPostTitle] = useState("");
+const today = new Date().toLocaleDateString("ko-KR");
+const loadPosts = async () => {
+  const snapshot = await getDocs(collection(db, "posts"));
+  const data = snapshot.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }));
+  setPosts(data.reverse());
+};
+const loadMatches = async () => {
+  const snapshot = await getDocs(collection(db, "matches"));
 
-  const loadMembers = async () => {
-    const snapshot = await getDocs(collection(db, "members"));
-    const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-    setMembers(data);
-  };
+  const data = snapshot.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }));
 
-  useEffect(() => {
-    loadMembers();
-  }, []);
+  setMatches(data.reverse());
+};
+useEffect(() => {
+  loadMembers();
+  loadMatches();
+  loadPosts(); // 👈 추가
+}, []);
 
   const login = () => {
     if (password === "admin123") {
@@ -48,8 +66,16 @@ export default function App() {
     await deleteDoc(doc(db, "members", id));
     loadMembers();
   };
+  if (!postTitle) return alert("글 제목 입력");
 
-  const registerMatch = async () => {
+  await addDoc(collection(db, "posts"), {
+    title: postTitle,
+    date: new Date().toLocaleString(),
+  });
+
+  setPostTitle("");
+  loadPosts();
+};
     if (!winner || !loser) {
       alert("승자와 패자를 선택하세요");
       return;
@@ -95,10 +121,12 @@ export default function App() {
         date: new Date().toLocaleString(),
       });
 
-      alert("경기 결과 등록 완료");
-      setWinner("");
-      setLoser("");
-      loadMembers();
+alert("경기 결과 등록 완료");
+setWinner("");
+setLoser("");
+
+loadMembers();
+loadMatches();
     } catch (err) {
       console.error(err);
       alert("경기 등록 중 오류가 발생했습니다");
@@ -152,6 +180,30 @@ export default function App() {
     DOMINATE THE LADDER
   </p>
 </div>
+<div className="top-info">
+  <div>📅 {today}</div>
+  <div>👥 현재 접속자 : 0명</div>
+  <div>📢 THUG CLAN 공식 홈페이지</div>
+  <div>💰 후원계좌 : 카카오뱅크 3333-11-7317866</div>
+</div>
+<div className="navbar">
+  <button onClick={() => setPage("home")}>HOME</button>
+  <button onClick={() => setPage("ranking")}>랭킹</button>
+  <button onClick={() => setPage("members")}>클랜원</button>
+  <button onClick={() => setPage("matches")}>경기기록</button>
+  <button onClick={() => setPage("board")}>게시판</button>
+  <button onClick={() => setPage("gallery")}>갤러리</button>
+</div>
+<div className="notice-box">
+  📢 공지사항 : THUG CLAN 클랜원 모집중
+</div>
+<div className="schedule-box">
+  <h2>📅 클랜 일정</h2>
+
+  <div>🔥 6월 22일 THUG VS STC</div>
+  <div>🏆 7월 3일 내부 리그</div>
+  <div>⚔️ 7월 10일 정기전</div>
+</div>
       {!isAdmin && (
         <div style={{ marginBottom: "20px" }}>
           <input
@@ -180,7 +232,21 @@ export default function App() {
     <h2>{members.length}</h2>
     <p>클랜원</p>
   </div>
+{page === "board" && (
+  <div className="rank-card">
+    <h2>📝 자유게시판</h2>
 
+    <div className="member-card">
+      <h3>THUG CLAN 홈페이지 오픈</h3>
+      <p>관리자</p>
+    </div>
+
+    <div className="member-card">
+      <h3>클랜원 모집중</h3>
+      <p>관리자</p>
+    </div>
+  </div>
+)}
   <div className="stat-box">
     <h2>{ranking[0]?.elo || 1000}</h2>
     <p>최고 ELO</p>
@@ -208,7 +274,17 @@ export default function App() {
           </div>
         ))}
       </div>
+<div className="recent-match-box">
+  <h3>⚔️ 최근 경기</h3>
 
+  {matches.slice(0, 10).map((match) => (
+    <div key={match.id}>
+      🏆 {match.winner} VS ❌ {match.loser}
+      <br />
+      <small>{match.date}</small>
+    </div>
+  ))}
+</div>
       <div style={{ marginBottom: "24px" }}>
         <h3 style={{ marginTop: "8px" }}>🏅 클랜전 승률 TOP 5</h3>
         {winRateRanking.slice(0, 5).map((m, i) => (
@@ -251,56 +327,43 @@ export default function App() {
           </button>
         </div>
       )}
-{filteredMembers.map((member) => (
-  <div key={member.id} className="member-card">
+{page === "members" && (
+  <div className="members-grid">
+    {filteredMembers.map((member, index) => (
+      <div key={member.id} className="member-card thug-card">
 
-          <div>
-            <h3>{member.nickname}</h3>
-            <div>종족 : {member.race}</div>
-            <div>티어 : {member.tier}</div>
-            <div>승 {member.wins || 0} 패 {member.losses || 0}</div>
-            <div>ELO : {member.elo || 1000}</div>
-          </div>
-          {isAdmin && (
-            <div
-              style={{
-                display: "flex",
-                gap: "6px",
-                flexWrap: "wrap",
-              }}
-            >
-              <button
-                onClick={() =>
-                  updateScore(member.id, "wins")
-                }
-              >
-                승 +1
-              </button>
-
-              <button
-                onClick={() =>
-                  updateScore(member.id, "losses")
-                }
-              >
-                패 +1
-              </button>
-              <button
-                onClick={() => editNickname(member)}
-              >
-                닉네임 수정
-              </button>
-              <button
-                onClick={() =>
-                  deleteMember(member.id)
-                }
-              >
-                삭제
-              </button>
-            </div>
-          )}
+        <div className="rank-badge">
+          #{index + 1}
         </div>
-      ))}
-    </div>
-  );
-}
 
+        <div className="member-info">
+          <h3 className="nickname">{member.nickname}</h3>
+
+          <div className="meta">
+            <span>종족 : {member.race}</span>
+            <span>티어 : {member.tier}</span>
+          </div>
+
+          <div className="stats">
+            <div>🏆 승 {member.wins || 0}</div>
+            <div>💀 패 {member.losses || 0}</div>
+          </div>
+
+          <div className="elo">
+            ⚡ ELO {member.elo || 1000}
+          </div>
+        </div>
+
+        {isAdmin && (
+          <div className="admin-buttons">
+            <button onClick={() => updateScore(member.id, "wins")}>+WIN</button>
+            <button onClick={() => updateScore(member.id, "losses")}>+LOSS</button>
+            <button onClick={() => editNickname(member)}>EDIT</button>
+            <button onClick={() => deleteMember(member.id)}>DELETE</button>
+          </div>
+        )}
+
+      </div>
+    ))}
+  </div>
+)}
