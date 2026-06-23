@@ -146,8 +146,12 @@ export default function App() {
 
   return (
   <div className="container">
-      <h1 style={{ textAlign: "center", fontSize: "48px" }}>THUG CLAN</h1>
-
+   <div className="top-banner">
+  <h1>THUG CLAN</h1>
+  <p>
+    DOMINATE THE LADDER
+  </p>
+</div>
       {!isAdmin && (
         <div style={{ marginBottom: "20px" }}>
           <input
@@ -171,7 +175,22 @@ export default function App() {
           </button>
         </div>
       )}
+<div className="stat-grid">
+  <div className="stat-box">
+    <h2>{members.length}</h2>
+    <p>클랜원</p>
+  </div>
 
+  <div className="stat-box">
+    <h2>{ranking[0]?.elo || 1000}</h2>
+    <p>최고 ELO</p>
+  </div>
+
+  <div className="stat-box">
+    <h2>{winRateRanking.length}</h2>
+    <p>랭킹 등록 인원</p>
+  </div>
+</div>
       <input
         placeholder="닉네임 검색"
         value={search}
@@ -232,9 +251,9 @@ export default function App() {
           </button>
         </div>
       )}
+{filteredMembers.map((member) => (
+  <div key={member.id} className="member-card">
 
-      {filteredMembers.map((member) => (
-        <div key={member.id} style={{ background: "#1e293b", padding: "15px", marginBottom: "10px", borderRadius: "10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
             <h3>{member.nickname}</h3>
             <div>종족 : {member.race}</div>

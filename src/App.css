@@ -1,63 +1,168 @@
 body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #0f172a;
-  color: white;
-}
-
-* {
-  box-sizing: border-box;
+margin: 0;
+padding: 0;
+background: #050816;
+color: white;
+font-family: "Segoe UI", sans-serif;
 }
 
 .container {
-  max-width: 1200px;
-  margin: auto;
-  padding: 20px;
+max-width: 1200px;
+margin: auto;
+padding: 25px;
+}
+
+h1 {
+color: #4da6ff;
+text-shadow:
+0 0 5px #4da6ff,
+0 0 15px #4da6ff,
+0 0 25px #2563eb;
+letter-spacing: 4px;
+margin-bottom: 30px;
+}
+
+h2,
+h3 {
+color: #60a5fa;
+}
+
+input,
+select {
+background: #111827;
+border: 1px solid #1e40af;
+color: white;
+outline: none;
+}
+
+input,
+select {
+border-color: #3b82f6;
+box-shadow: 0 0 10px #3b82f6;
+}
+
+button {
+background: linear-gradient(
+135deg,
+#2563eb,
+#1d4ed8
+);
+border: none;
+color: white;
+padding: 10px 15px;
+border-radius: 8px;
+cursor: pointer;
+transition: 0.25s;
+}
+
+button {
+transform: translateY(-2px);
+box-shadow: 0 0 15px #2563eb;
+}
+
+.rank-card {
+background: linear-gradient(
+135deg,
+#0f172a,
+#1e3a8a
+);
+border: 1px solid #2563eb;
+border-radius: 12px;
+padding: 15px;
+margin-bottom: 20px;
 }
 
 .member-card {
-  background: #1e293b;
-  padding: 15px;
-  border-radius: 10px;
-  margin-bottom: 10px;
+background: #111827;
+border: 1px solid #1e3a8a;
+border-radius: 12px;
+padding: 16px;
+margin-bottom: 12px;
+transition: 0.25s;
 }
 
-.search-box {
-  width: 100%;
-  padding: 12px;
-  border-radius: 8px;
-  border: none;
+.member-card {
+border-color: #3b82f6;
+box-shadow: 0 0 15px rgba(59,130,246,.4);
 }
 
-.admin-btn {
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
+.admin-box {
+background: #0f172a;
+border: 1px solid #2563eb;
+border-radius: 12px;
+padding: 20px;
+margin-bottom: 25px;
 }
 
-@media (max-width: 768px) {
+.top-banner {
+background: linear-gradient(
+135deg,
+#020617,
+#0f172a,
+#1e3a8a
+);
 
-  h1 {
-    font-size: 28px !important;
-  }
+border-radius: 16px;
+padding: 35px;
+margin-bottom: 25px;
+text-align: center;
+border: 1px solid #2563eb;
+}
 
-  h2 {
-    font-size: 20px;
-  }
+.top-banner h1 {
+font-size: 60px;
+margin-bottom: 10px;
+}
 
-  .member-card {
-    padding: 12px;
-  }
+.top-banner p {
+color: #cbd5e1;
+font-size: 18px;
+}
 
-  .search-box {
-    font-size: 16px;
-  }
+.stat-grid {
+display: grid;
+grid-template-columns: repeat(3,1fr);
+gap: 15px;
+margin-bottom: 25px;
+}
 
-  select,
-  button,
-  input {
-    width: 100%;
-    margin-top: 8px;
-    padding: 12px;
-  }
+.stat-box {
+background: #111827;
+border: 1px solid #1e40af;
+border-radius: 12px;
+text-align: center;
+padding: 20px;
+}
+
+.stat-box h2 {
+margin: 0;
+color: #60a5fa;
+}
+
+.stat-box p {
+margin-top: 10px;
+color: #cbd5e1;
+}
+
+@media (max-width:768px) {
+
+.container {
+padding: 12px;
+}
+
+.top-banner {
+padding: 20px;
+}
+
+.top-banner h1 {
+font-size: 34px;
+}
+
+.stat-grid {
+grid-template-columns: 1fr;
+}
+
+.member-card {
+flex-direction: column;
+}
 }
