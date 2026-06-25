@@ -14,7 +14,13 @@ import {
 export default function App() {
   const [members, setMembers] = useState([]);
   const [search, setSearch] = useState("");
+  const [newNickname, setNewNickname] = useState("");
+const [newRace, setNewRace] = useState("Terran");
+const [newTier, setNewTier] = useState("");
   const [winner, setWinner] = useState("");
+  const [newNickname, setNewNickname] = useState("");
+const [newRace, setNewRace] = useState("Terran");
+const [newTier, setNewTier] = useState("");
   const [loser, setLoser] = useState("");
   const [loading, setLoading] = useState(false);
   const [password, setPassword] = useState("");
@@ -22,7 +28,18 @@ const [isAdmin, setIsAdmin] = useState(false);
 const [matches, setMatches] = useState([]);
 const [page, setPage] = useState("home");
 const [posts, setPosts] = useState([]);
+const [selectedPost, setSelectedPost] = useState(null);
 const [postTitle, setPostTitle] = useState("");
+const [postAuthor, setPostAuthor] = useState("");
+const [postContent, setPostContent] = useState("");
+const [clanWars, setClanWars] = useState([]);
+
+const [enemyClan, setEnemyClan] = useState("");
+const [ourScore, setOurScore] = useState("");
+const [enemyScore, setEnemyScore] = useState("");
+const [schedules, setSchedules] = useState([]);
+const [scheduleTitle, setScheduleTitle] = useState("");
+const [scheduleDate, setScheduleDate] = useState("");
 const today = new Date().toLocaleDateString("ko-KR");
 const loadPosts = async () => {
   const snapshot = await getDocs(collection(db, "posts"));
@@ -33,6 +50,17 @@ const loadPosts = async () => {
   setPosts(data.reverse());
 };
 const loadMembers = async () => {
+
+  const loadSchedules = async () => {
+  const snapshot = await getDocs(collection(db, "schedules"));
+
+  const data = snapshot.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }));
+
+  setSchedules(data);
+};
   const snapshot = await getDocs(collection(db, "members"));
 
   const data = snapshot.docs.map((d) => ({
@@ -50,12 +78,33 @@ const loadMatches = async () => {
     ...d.data(),
   }));
 
-  setMatches(data.reverse());
+  data.sort(
+    (a, b) =>
+      new Date(b.date).getTime() -
+      new Date(a.date).getTime()
+  );
+
+  setMatches(data);
+};
+
+const loadClanWars = async () => {
+  const snapshot = await getDocs(
+    collection(db, "clanwars")
+  );
+
+  const data = snapshot.docs.map((d) => ({
+    id: d.id,
+    ...d.data(),
+  }));
+
+  setClanWars(data.reverse());
 };
 useEffect(() => {
   loadMembers();
   loadMatches();
-  loadPosts(); // 👈 추가
+  loadPosts();
+  loadSchedules();
+  loadClanWars();
 }, []);
 
   const login = () => {
@@ -68,8 +117,73 @@ useEffect(() => {
   };
 
   const logout = () => setIsAdmin(false);
+  const deleteSchedule = async (id) => {
+  await deleteDoc(doc(db, "schedules", id));
 
+  loadSchedules();
+};
+const addSchedule = async () => {
+  
+  if (!scheduleTitle || !scheduleDate) {
+    alert("날짜와 일정을 입력하세요");
+    return;
+  }
+
+  await addDoc(collection(db, "schedules"), {
+    title: scheduleTitle,
+    date: scheduleDate,
+  });
+
+  setScheduleTitle("");
+  setScheduleDate("");
+
+  loadSchedules();
+};
+const addMember = async () => {
+  if (!newNickname || !newTier) {
+    alert("닉네임과 티어를 입력하세요");
+    return;
+  }
+
+  await addDoc(collection(db, "members"), {
+    nickname: newNickname,
+    race: newRace,
+    tier: newTier,
+    wins: 0,
+    losses: 0,
+    elo: 1000,
+  });
+
+  setNewNickname("");
+  setNewTier("");
+
+  loadMembers();
+};
+const addMember = async () => {
+  if (!newNickname || !newTier) {
+    alert("닉네임과 티어를 입력하세요");
+    return;
+  }
+
+  await addDoc(collection(db, "members"), {
+    nickname: newNickname,
+    race: newRace,
+    tier: newTier,
+    wins: 0,
+    losses: 0,
+    elo: 1000,
+  });
+
+  setNewNickname("");
+  setNewRace("Terran");
+  setNewTier("");
+
+  loadMembers();
+
+  alert("클랜원 등록 완료");
+};
   const deleteMember = async (id) => {
+
     const ok = confirm("정말 삭제하시겠습니까?");
     if (!ok) return;
 
@@ -77,20 +191,34 @@ useEffect(() => {
     loadMembers();
   };
 
-  const addPost = async () => {
-    if (!postTitle) return alert("글 제목 입력");
+const addPost = async () => {
+  if (!postTitle) {
+    alert("글 제목을 입력하세요");
+    return;
+  }
 
-const handleSubmit = async () => {
   await addDoc(collection(db, "posts"), {
     title: postTitle,
+    author: postAuthor,
+    content: postContent,
     createdAt: new Date().toLocaleString(),
   });
-};
-    setPostTitle("");
-    loadPosts();
-  };
 
-  const registerMatch = async () => {
+  setPostTitle("");
+  loadPosts();
+};
+
+const deletePost = async (id) => {
+  const ok = confirm("삭제하시겠습니까?");
+
+  if (!ok) return;
+
+  await deleteDoc(doc(db, "posts", id));
+
+  loadPosts();
+};
+
+const registerMatch = async () => {
     if (!winner || !loser) {
       alert("승자와 패자를 선택하세요");
       return;
@@ -150,6 +278,32 @@ const handleSubmit = async () => {
     setLoading(false);
   };
 
+
+  const addClanWar = async () => {
+  if (!enemyClan || !ourScore || !enemyScore) {
+    alert("모든 정보를 입력하세요");
+    return;
+  }
+
+  await addDoc(collection(db, "clanwars"), {
+    enemyClan,
+    ourScore: Number(ourScore),
+    enemyScore: Number(enemyScore),
+
+    result:
+      Number(ourScore) > Number(enemyScore)
+        ? "승리"
+        : "패배",
+
+    date: new Date().toLocaleDateString(),
+  });
+
+  setEnemyClan("");
+  setOurScore("");
+  setEnemyScore("");
+
+  loadClanWars();
+};
   const editNickname = async (member) => {
     const newName = prompt("새 닉네임", member.nickname);
 
@@ -176,6 +330,24 @@ const handleSubmit = async () => {
   const filteredMembers = members.filter((member) => (member.nickname || "").toLowerCase().includes(search.toLowerCase()));
 
   const ranking = [...members].sort((a, b) => (b.elo || 1000) - (a.elo || 1000));
+  const clanWins =
+  clanWars.filter(
+    (w) => w.result === "승리"
+  ).length;
+
+const clanLosses =
+  clanWars.filter(
+    (w) => w.result === "패배"
+  ).length;
+
+const clanWinRate =
+  clanWins + clanLosses === 0
+    ? 0
+    : (
+        (clanWins /
+          (clanWins + clanLosses)) *
+        100
+      ).toFixed(1);
 
   const winRateRanking = [...members]
     .map((member) => {
@@ -184,7 +356,7 @@ const handleSubmit = async () => {
       const total = wins + losses;
       return { ...member, winRate: total === 0 ? 0 : (wins / total) * 100 };
     })
-    .filter((m) => (m.wins || 0) + (m.losses || 0) >= 5)
+    .filter((m) => (m.wins || 0) + (m.losses || 0) >= 1)
     .sort((a, b) => b.winRate - a.winRate);
 
   return (
@@ -206,6 +378,7 @@ const handleSubmit = async () => {
   <button onClick={() => setPage("ranking")}>랭킹</button>
   <button onClick={() => setPage("members")}>클랜원</button>
   <button onClick={() => setPage("matches")}>경기기록</button>
+  <button onClick={() => setPage("clanwar")}>클랜전</button>
   <button onClick={() => setPage("board")}>게시판</button>
   <button onClick={() => setPage("gallery")}>갤러리</button>
 </div>
@@ -215,9 +388,40 @@ const handleSubmit = async () => {
 <div className="schedule-box">
   <h2>📅 클랜 일정</h2>
 
-  <div>🔥 6월 22일 THUG VS STC</div>
-  <div>🏆 7월 3일 내부 리그</div>
-  <div>⚔️ 7월 10일 정기전</div>
+  {schedules.map((item) => (
+    <div key={item.id}>
+      📅 {item.date} - {item.title}
+
+      {isAdmin && (
+        <button
+          onClick={() => deleteSchedule(item.id)}
+          style={{ marginLeft: "10px" }}
+        >
+          삭제
+        </button>
+      )}
+    </div>
+  ))}
+
+  {isAdmin && (
+    <div style={{ marginTop: "15px" }}>
+      <input
+        type="date"
+        value={scheduleDate}
+        onChange={(e) => setScheduleDate(e.target.value)}
+      />
+
+      <input
+        placeholder="일정 입력"
+        value={scheduleTitle}
+        onChange={(e) => setScheduleTitle(e.target.value)}
+      />
+
+      <button onClick={addSchedule}>
+        일정 추가
+      </button>
+    </div>
+  )}
 </div>
       {!isAdmin && (
         <div style={{ marginBottom: "20px" }}>
@@ -242,6 +446,49 @@ const handleSubmit = async () => {
           </button>
         </div>
       )}
+
+      {isAdmin && (
+  <div
+    style={{
+      background: "#1e293b",
+      padding: "20px",
+      borderRadius: "10px",
+      marginBottom: "20px",
+    }}
+  >
+    <h3>👥 클랜원 추가</h3>
+
+    <input
+      placeholder="닉네임"
+      value={newNickname}
+      onChange={(e) => setNewNickname(e.target.value)}
+    />
+
+    <select
+      value={newRace}
+      onChange={(e) => setNewRace(e.target.value)}
+      style={{ marginLeft: "10px" }}
+    >
+      <option value="Terran">Terran</option>
+      <option value="Zerg">Zerg</option>
+      <option value="Protoss">Protoss</option>
+    </select>
+
+    <input
+      placeholder="티어"
+      value={newTier}
+      onChange={(e) => setNewTier(e.target.value)}
+      style={{ marginLeft: "10px" }}
+    />
+
+    <button
+      onClick={addMember}
+      style={{ marginLeft: "10px" }}
+    >
+      추가
+    </button>
+  </div>
+)}
 <div className="stat-grid">
   <div className="stat-box">
     <h2>{members.length}</h2>
@@ -251,15 +498,165 @@ const handleSubmit = async () => {
   <div className="rank-card">
     <h2>📝 자유게시판</h2>
 
-    <div className="member-card">
-      <h3>THUG CLAN 홈페이지 오픈</h3>
-      <p>관리자</p>
-    </div>
+    {isAdmin && (
+      <div style={{ marginBottom: "20px" }}>
+        <input
+          type="text"
+          placeholder="게시글 제목 입력"
+          input
+  type="text"
+  placeholder="작성자"
+  value={postAuthor}
+  onChange={(e) => setPostAuthor(e.target.value)}
+/>
 
-    <div className="member-card">
-      <h3>클랜원 모집중</h3>
-      <p>관리자</p>
-    </div>
+<textarea
+  placeholder="내용 입력"
+  value={postContent}
+  onChange={(e) => setPostContent(e.target.value)}
+  rows={5}
+/>
+          value={postTitle}
+          onChange={(e) => setPostTitle(e.target.value)}
+          style={{
+            width: "70%",
+            padding: "10px",
+            borderRadius: "8px",
+          }}
+
+
+        <button
+          onClick={addPost}
+          style={{
+            marginLeft: "10px",
+            padding: "10px",
+          }}
+        >
+          글쓰기
+        </button>
+      </div>
+    )}
+
+    {posts.length === 0 ? (
+      <div>등록된 게시글이 없습니다.</div>
+    ) : (
+      posts.map((post) => (
+        <div
+          key={post.id}
+          className="member-card"
+          style={{ marginBottom: "10px" }}
+        >
+<h3>{post.title}</h3>
+
+<p>작성자 : {post.author}</p>
+
+<p>{post.content}</p>
+
+<small>{post.createdAt}</small>
+{posts.map((post) => (
+  <div
+    key={post.id}
+    className="member-card"
+    onClick={() => setSelectedPost(post)}
+    style={{
+      cursor: "pointer",
+      marginBottom: "10px"
+    }}
+  >
+    <h3>{post.title}</h3>
+
+    <small>{post.createdAt}</small>
+
+    {isAdmin && (
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          deletePost(post.id);
+        }}
+        style={{
+          marginLeft: "10px"
+        }}
+      >
+        삭제
+      </button>
+    )}
+  </div>
+))}
+{selectedPost && (
+  <div
+    style={{
+      background: "#111827",
+      padding: "20px",
+      borderRadius: "12px",
+      marginTop: "20px",
+      border: "1px solid #334155"
+    }}
+  >
+    <h2>{selectedPost.title}</h2>
+
+    <p>👤 작성자 : {selectedPost.author}</p>
+
+    <p>📅 작성일 : {selectedPost.createdAt}</p>
+
+    <hr />
+
+    <p style={{ whiteSpace: "pre-wrap" }}>
+      {selectedPost.content}
+    </p>
+
+    <button
+      onClick={() => setSelectedPost(null)}
+      style={{
+        marginTop: "10px"
+      }}
+    >
+      닫기
+    </button>
+  </div>
+)}
+{selectedPost && (
+  <div
+    style={{
+      background: "#111827",
+      padding: "20px",
+      borderRadius: "12px",
+      marginTop: "20px",
+      border: "1px solid #334155"
+    }}
+  >
+    <h2>{selectedPost.title}</h2>
+
+    <p>
+      👤 작성자 : {selectedPost.author}
+    </p>
+
+    <p>
+      📅 작성일 : {selectedPost.createdAt}
+    </p>
+
+    <hr />
+
+    <p
+      style={{
+        whiteSpace: "pre-wrap"
+      }}
+    >
+      {selectedPost.content}
+    </p>
+
+    <button
+      onClick={() => setSelectedPost(null)}
+      style={{
+        marginTop: "15px"
+      }}
+    >
+      닫기
+    </button>
+  </div>
+)}
+        </div>
+      ))
+    )}
   </div>
 )}
   <div className="stat-box">
@@ -343,6 +740,62 @@ const handleSubmit = async () => {
         </div>
       )}
 {page === "members" && (
+  {isAdmin && (
+  <div
+    style={{
+      background: "#1e293b",
+      padding: "15px",
+      borderRadius: "10px",
+      marginBottom: "20px",
+    }}
+  >
+    <h3>➕ 신규 클랜원 등록</h3>
+
+    <input
+      placeholder="닉네임"
+      value={newNickname}
+      onChange={(e) =>
+        setNewNickname(e.target.value)
+      }
+    />
+
+    <select
+      value={newRace}
+      onChange={(e) =>
+        setNewRace(e.target.value)
+      }
+      style={{ marginLeft: "10px" }}
+    >
+      <option value="Terran">
+        Terran
+      </option>
+
+      <option value="Zerg">
+        Zerg
+      </option>
+
+      <option value="Protoss">
+        Protoss
+      </option>
+    </select>
+
+    <input
+      placeholder="티어"
+      value={newTier}
+      onChange={(e) =>
+        setNewTier(e.target.value)
+      }
+      style={{ marginLeft: "10px" }}
+    />
+
+    <button
+      onClick={addMember}
+      style={{ marginLeft: "10px" }}
+    >
+      등록
+    </button>
+  </div>
+)}
   <div className="members-grid">
     {filteredMembers.map((member, index) => (
       <div key={member.id} className="member-card thug-card">
@@ -377,6 +830,97 @@ const handleSubmit = async () => {
             <button onClick={() => deleteMember(member.id)}>DELETE</button>
           </div>
         )}
+        {page === "clanwar" && (
+  <div className="rank-card">
+
+    <h2>⚔️ THUG 클랜전 기록</h2>
+
+    {isAdmin && (
+      <div
+        style={{
+          background: "#1e293b",
+          padding: "15px",
+          borderRadius: "10px",
+          marginBottom: "20px",
+        }}
+      >
+        <input
+          placeholder="상대 클랜"
+          value={enemyClan}
+          onChange={(e) =>
+            setEnemyClan(e.target.value)
+          }
+        />
+
+        <input
+          placeholder="THUG 점수"
+          value={ourScore}
+          onChange={(e) =>
+            setOurScore(e.target.value)
+          }
+          style={{ marginLeft: "10px" }}
+        />
+
+        <input
+          placeholder="상대 점수"
+          value={enemyScore}
+          onChange={(e) =>
+            setEnemyScore(e.target.value)
+          }
+          style={{ marginLeft: "10px" }}
+        />
+
+        <button
+          onClick={addClanWar}
+          style={{ marginLeft: "10px" }}
+        >
+          등록
+        </button>
+      </div>
+    )}
+
+    {clanWars.map((war) => (
+      <div
+        key={war.id}
+        className="member-card"
+        style={{
+          marginBottom: "15px",
+          borderLeft:
+            war.result === "승리"
+              ? "5px solid #22c55e"
+              : "5px solid #ef4444",
+        }}
+      >
+        <h3>
+          THUG VS {war.enemyClan}
+        </h3>
+
+        <h2>
+          {war.ourScore}
+          :
+          {war.enemyScore}
+        </h2>
+
+        <div>{war.result}</div>
+
+        <small>{war.date}</small>
+        {isAdmin && (
+  <button
+    onClick={() =>
+      deleteClanWar(war.id)
+    }
+    style={{
+      marginTop: "10px",
+    }}
+  >
+    삭제
+  </button>
+)}
+      </div>
+    ))}
+
+  </div>
+)}
 
       </div>
     ))}
