@@ -139,26 +139,7 @@ const addSchedule = async () => {
 
   loadSchedules();
 };
-const addMember = async () => {
-  if (!newNickname || !newTier) {
-    alert("닉네임과 티어를 입력하세요");
-    return;
-  }
 
-  await addDoc(collection(db, "members"), {
-    nickname: newNickname,
-    race: newRace,
-    tier: newTier,
-    wins: 0,
-    losses: 0,
-    elo: 1000,
-  });
-
-  setNewNickname("");
-  setNewTier("");
-
-  loadMembers();
-};
 const addMember = async () => {
   if (!newNickname || !newTier) {
     alert("닉네임과 티어를 입력하세요");
@@ -739,9 +720,8 @@ const clanWinRate =
           </button>
         </div>
       )}
-{page === "members" && (
-  {isAdmin && (
-  <div
+{page === "members" && isAdmin && (
+  <div>
     style={{
       background: "#1e293b",
       padding: "15px",
