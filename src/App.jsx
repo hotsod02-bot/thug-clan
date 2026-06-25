@@ -11,6 +11,24 @@ import {
   addDoc,
 } from "firebase/firestore";
 
+// 텍스트 데이터를 기반으로 정밀 정제한 클랜전 기록 (초기값 백업용)
+const initialClanWars = [
+  { id: "raw-1", enemyClan: "1st", ourScore: 5, enemyScore: 1, result: "승리", date: "2026-05-30" },
+  { id: "raw-2", enemyClan: "스타스쿨", ourScore: 1, enemyScore: 4, result: "패배", date: "2026-05-31" },
+  { id: "raw-3", enemyClan: "New", ourScore: 4, enemyScore: 3, result: "승리", date: "2026-06-01" },
+  { id: "raw-4", enemyClan: "BEAST", ourScore: 4, enemyScore: 2, result: "승리", date: "2026-06-02" },
+  { id: "raw-5", enemyClan: "STC", ourScore: 4, enemyScore: 2, result: "승리", date: "2026-06-03" },
+  { id: "raw-6", enemyClan: "은하팸", ourScore: 2, enemyScore: 3, result: "패배", date: "2026-06-04" },
+  { id: "raw-7", enemyClan: "Feisty (1차)", ourScore: 3, enemyScore: 2, result: "승리", date: "2026-06-05" },
+  { id: "raw-8", enemyClan: "sea+", ourScore: 0, enemyScore: 5, result: "패배", date: "2026-06-07" },
+  { id: "raw-9", enemyClan: "Feisty (2차)", ourScore: 6, enemyScore: 2, result: "승리", date: "2026-06-09" },
+  { id: "raw-10", enemyClan: "Feisty (3차)", ourScore: 6, enemyScore: 1, result: "승리", date: "2026-06-12" },
+  { id: "raw-11", enemyClan: "Rock", ourScore: 2, enemyScore: 4, result: "패배", date: "2026-06-14" },
+  { id: "raw-12", enemyClan: "Feisty (4차)", ourScore: 2, enemyScore: 5, result: "패배", date: "2026-06-16" },
+  { id: "raw-13", enemyClan: "숲스타", ourScore: 2, enemyScore: 3, result: "패배", date: "2026-06-20" },
+  { id: "raw-14", enemyClan: "STC (2차)", ourScore: 2, enemyScore: 4, result: "패배", date: "2026-06-22" }
+];
+
 export default function App() {
   const [members, setMembers] = useState([]);
   const [search, setSearch] = useState("");
@@ -38,57 +56,47 @@ export default function App() {
   const [scheduleTitle, setScheduleTitle] = useState("");
   const [scheduleDate, setScheduleDate] = useState("");
   
-  // 댓글 기능을 위한 상태 추가
   const [commentAuthor, setCommentAuthor] = useState("");
   const [commentContent, setCommentContent] = useState("");
 
   const today = new Date().toLocaleDateString("ko-KR");
 
-  // 데이터 로드 함수들
+  // 데이터 로드
   const loadPosts = async () => {
     const snapshot = await getDocs(collection(db, "posts"));
-    const data = snapshot.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    }));
+    const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
     setPosts(data.reverse());
   };
 
   const loadSchedules = async () => {
     const snapshot = await getDocs(collection(db, "schedules"));
-    const data = snapshot.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    }));
+    const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
     setSchedules(data);
   };
 
   const loadMembers = async () => {
     const snapshot = await getDocs(collection(db, "members"));
-    const data = snapshot.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    }));
+    const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
     setMembers(data);
   };
 
   const loadMatches = async () => {
     const snapshot = await getDocs(collection(db, "matches"));
-    const data = snapshot.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    }));
+    const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
     data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setMatches(data);
   };
 
   const loadClanWars = async () => {
     const snapshot = await getDocs(collection(db, "clanwars"));
-    const data = snapshot.docs.map((d) => ({
-      id: d.id,
-      ...d.data(),
-    }));
-    setClanWars(data.reverse());
+    const firebaseData = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    
+    // 파이어베이스 데이터와 주신 텍스트 데이터를 결합 (중복 방지 처리 가능)
+    const combined = [...firebaseData, ...initialClanWars.filter(item => !firebaseData.some(f => f.enemyClan === item.enemyClan && f.date === item.date))];
+    
+    // 날짜 최신순 정렬
+    combined.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setClanWars(combined);
   };
 
   useEffect(() => {
@@ -99,7 +107,7 @@ export default function App() {
     loadClanWars();
   }, []);
 
-  // 인증 관련
+  // 인증
   const login = () => {
     if (password === "admin123") {
       setIsAdmin(true);
@@ -108,13 +116,11 @@ export default function App() {
       alert("비밀번호가 틀렸습니다");
     }
   };
-
   const logout = () => setIsAdmin(false);
 
   // 일정 관리
   const deleteSchedule = async (id) => {
-    const ok = confirm("일정을 삭제하시겠습니까?");
-    if (!ok) return;
+    if (!confirm("일정을 삭제하시겠습니까?")) return;
     await deleteDoc(doc(db, "schedules", id));
     loadSchedules();
   };
@@ -124,10 +130,7 @@ export default function App() {
       alert("날짜와 일정을 입력하세요");
       return;
     }
-    await addDoc(collection(db, "schedules"), {
-      title: scheduleTitle,
-      date: scheduleDate,
-    });
+    await addDoc(collection(db, "schedules"), { title: scheduleTitle, date: scheduleDate });
     setScheduleTitle("");
     setScheduleDate("");
     loadSchedules();
@@ -142,7 +145,7 @@ export default function App() {
     await addDoc(collection(db, "members"), {
       nickname: newNickname,
       race: newRace,
-      tier: newTier,
+      tier: newTier.toUpperCase(),
       wins: 0,
       losses: 0,
       elo: 1000,
@@ -155,8 +158,7 @@ export default function App() {
   };
 
   const deleteMember = async (id) => {
-    const ok = confirm("정말 삭제하시겠습니까?");
-    if (!ok) return;
+    if (!confirm("정말 삭제하시겠습니까?")) return;
     await deleteDoc(doc(db, "members", id));
     loadMembers();
   };
@@ -164,22 +166,18 @@ export default function App() {
   const editNickname = async (member) => {
     const newName = prompt("새 닉네임", member.nickname);
     if (!newName) return;
-    await updateDoc(doc(db, "members", member.id), {
-      nickname: newName,
-    });
+    await updateDoc(doc(db, "members", member.id), { nickname: newName });
     loadMembers();
   };
 
   const updateScore = async (id, type) => {
     const member = members.find((m) => m.id === id);
     if (!member) return;
-    await updateDoc(doc(db, "members", id), {
-      [type]: (member[type] || 0) + 1,
-    });
+    await updateDoc(doc(db, "members", id), { [type]: (member[type] || 0) + 1 });
     loadMembers();
   };
 
-  // 게시판 관리
+  // 게시판 & 댓글
   const addPost = async () => {
     if (!postTitle) {
       alert("글 제목을 입력하세요");
@@ -190,7 +188,7 @@ export default function App() {
       author: postAuthor || "익명",
       content: postContent,
       createdAt: new Date().toLocaleString(),
-      comments: [] // 댓글 배열 초기화
+      comments: []
     });
     setPostTitle("");
     setPostAuthor("");
@@ -199,62 +197,44 @@ export default function App() {
   };
 
   const deletePost = async (id) => {
-    const ok = confirm("삭제하시겠습니까?");
-    if (!ok) return;
+    if (!confirm("삭제하시겠습니까?")) return;
     await deleteDoc(doc(db, "posts", id));
     if (selectedPost && selectedPost.id === id) setSelectedPost(null);
     loadPosts();
   };
 
-  // 💬 댓글 추가 기능
   const addComment = async () => {
     if (!commentContent) {
       alert("댓글 내용을 입력하세요");
       return;
     }
     const updatedComments = selectedPost.comments ? [...selectedPost.comments] : [];
-    const newComment = {
+    updatedComments.push({
       id: Date.now().toString(),
       author: commentAuthor || "익명",
       content: commentContent,
       createdAt: new Date().toLocaleString(),
-    };
-    updatedComments.push(newComment);
-
-    await updateDoc(doc(db, "posts", selectedPost.id), {
-      comments: updatedComments
     });
 
-    // 상세 보기 상태 업데이트 및 초기화
-    const updatedPost = { ...selectedPost, comments: updatedComments };
-    setSelectedPost(updatedPost);
+    await updateDoc(doc(db, "posts", selectedPost.id), { comments: updatedComments });
+    setSelectedPost({ ...selectedPost, comments: updatedComments });
     setCommentAuthor("");
     setCommentContent("");
-    loadPosts(); // 게시글 목록 새로고침
+    loadPosts();
   };
 
-  // 전적 등록
+  // 내부 경기 결과 등록
   const registerMatch = async () => {
-    if (!winner || !loser) {
-      alert("승자와 패자를 선택하세요");
-      return;
-    }
-    if (winner === loser) {
-      alert("같은 사람은 선택할 수 없습니다");
-      return;
-    }
+    if (!winner || !loser) { alert("승자와 패자를 선택하세요"); return; }
+    if (winner === loser) { alert("같은 사람은 선택할 수 없습니다"); return; }
 
     const winnerMember = members.find((m) => m.id === winner);
     const loserMember = members.find((m) => m.id === loser);
-    if (!winnerMember || !loserMember) {
-      alert("선수 정보를 불러오지 못했습니다");
-      return;
-    }
+    if (!winnerMember || !loserMember) { alert("선수 정보를 불러오지 못했습니다"); return; }
 
     const winnerElo = winnerMember.elo || 1000;
     const loserElo = loserMember.elo || 1000;
     const K = 32;
-
     const expectedWinner = 1 / (1 + Math.pow(10, (loserElo - winnerElo) / 400));
     const expectedLoser = 1 / (1 + Math.pow(10, (winnerElo - loserElo) / 400));
 
@@ -262,29 +242,17 @@ export default function App() {
     const newLoserElo = Math.round(loserElo + K * (0 - expectedLoser));
 
     setLoading(true);
-
     try {
-      await updateDoc(doc(db, "members", winner), {
-        wins: (winnerMember.wins || 0) + 1,
-        elo: newWinnerElo,
-      });
-
-      await updateDoc(doc(db, "members", loser), {
-        losses: (loserMember.losses || 0) + 1,
-        elo: newLoserElo,
-      });
-
+      await updateDoc(doc(db, "members", winner), { wins: (winnerMember.wins || 0) + 1, elo: newWinnerElo });
+      await updateDoc(doc(db, "members", loser), { losses: (loserMember.losses || 0) + 1, elo: newLoserElo });
       await addDoc(collection(db, "matches"), {
         winner: winnerMember.nickname,
         loser: loserMember.nickname,
         date: new Date().toLocaleString(),
       });
-
       alert("경기 결과 등록 완료");
-      setWinner("");
-      setLoser("");
-      loadMembers();
-      loadMatches();
+      setWinner(""); setLoser("");
+      loadMembers(); loadMatches();
     } catch (err) {
       console.error(err);
       alert("경기 등록 중 오류가 발생했습니다");
@@ -292,13 +260,9 @@ export default function App() {
     setLoading(false);
   };
 
-  // 클랜전 관리
+  // 외부 클랜전 기록 추가/삭제
   const addClanWar = async () => {
-    if (!enemyClan || !ourScore || !enemyScore) {
-      alert("모든 정보를 입력하세요");
-      return;
-    }
-
+    if (!enemyClan || !ourScore || !enemyScore) { alert("모든 정보를 입력하세요"); return; }
     await addDoc(collection(db, "clanwars"), {
       enemyClan,
       ourScore: Number(ourScore),
@@ -306,47 +270,56 @@ export default function App() {
       result: Number(ourScore) > Number(enemyScore) ? "승리" : "패배",
       date: new Date().toLocaleDateString(),
     });
-
-    setEnemyClan("");
-    setOurScore("");
-    setEnemyScore("");
+    setEnemyClan(""); setOurScore(""); setEnemyScore("");
     loadClanWars();
   };
 
   const deleteClanWar = async (id) => {
-    const ok = confirm("클랜전 기록을 삭제하시겠습니까?");
-    if (!ok) return;
+    if (!confirm("기록을 삭제하시겠습니까?")) return;
+    if(id.startsWith("raw-")) {
+      alert("기본 연동 데이터는 수동 삭제가 불가능합니다.");
+      return;
+    }
     await deleteDoc(doc(db, "clanwars", id));
     loadClanWars();
   };
 
-  // 필터링 및 랭킹 연산
-  const filteredMembers = members.filter((member) =>
-    (member.nickname || "").toLowerCase().includes(search.toLowerCase())
-  );
-
+  // 랭킹 및 분포 계산 로직
+  const filteredMembers = members.filter((m) => (m.nickname || "").toLowerCase().includes(search.toLowerCase()));
   const ranking = [...members].sort((a, b) => (b.elo || 1000) - (a.elo || 1000));
   
   const clanWins = clanWars.filter((w) => w.result === "승리").length;
   const clanLosses = clanWars.filter((w) => w.result === "패배").length;
-  const clanWinRate =
-    clanWins + clanLosses === 0
-      ? 0
-      : ((clanWins / (clanWins + clanLosses)) * 100).toFixed(1);
+  const clanWinRate = clanWins + clanLosses === 0 ? 0 : ((clanWins / (clanWins + clanLosses)) * 100).toFixed(1);
 
   const winRateRanking = [...members]
-    .map((member) => {
-      const wins = member.wins || 0;
-      const losses = member.losses || 0;
-      const total = wins + losses;
-      return { ...member, winRate: total === 0 ? 0 : (wins / total) * 100 };
+    .map((m) => {
+      const w = m.wins || 0; const l = m.losses || 0; const t = w + l;
+      return { ...m, winRate: t === 0 ? 0 : (w / t) * 100 };
     })
     .filter((m) => (m.wins || 0) + (m.losses || 0) >= 1)
     .sort((a, b) => b.winRate - a.winRate);
 
+  // 종족 통계 연산
+  const totalCount = members.length || 1;
+  const terranCount = members.filter(m => m.race?.toLowerCase() === "terran").length;
+  const zergCount = members.filter(m => m.race?.toLowerCase() === "zerg").length;
+  const protossCount = members.filter(m => m.race?.toLowerCase() === "protoss").length;
+
+  const tPercent = ((terranCount / totalCount) * 100).toFixed(1);
+  const zPercent = ((zergCount / totalCount) * 100).toFixed(1);
+  const pPercent = ((protossCount / totalCount) * 100).toFixed(1);
+
+  // 티어 통계 연산
+  const tierMap = {};
+  members.forEach(m => {
+    const t = m.tier ? m.tier.toUpperCase() : "미지정";
+    tierMap[t] = (tierMap[t] || 0) + 1;
+  });
+
   return (
     <div className="container">
-      {/* 상단 배너 및 정보 */}
+      {/* 상단 레이아웃 */}
       <div className="top-banner">
         <h1>THUG CLAN</h1>
         <p>DOMINATE THE LADDER</p>
@@ -358,7 +331,7 @@ export default function App() {
         <div>💰 후원계좌 : 카카오뱅크 3333-11-7317866</div>
       </div>
 
-      {/* 네비게이션 바 */}
+      {/* 네비게이션 */}
       <div className="navbar">
         <button onClick={() => setPage("home")}>HOME</button>
         <button onClick={() => setPage("ranking")}>랭킹</button>
@@ -371,20 +344,15 @@ export default function App() {
 
       <div className="notice-box">📢 공지사항 : THUG CLAN 클랜원 모집중</div>
 
-      {/* 클랜 일정 */}
+      {/* 일정 */}
       <div className="schedule-box">
         <h2>📅 클랜 일정</h2>
         {schedules.map((item) => (
           <div key={item.id} style={{ marginBottom: "5px" }}>
             📅 {item.date} - {item.title}
-            {isAdmin && (
-              <button onClick={() => deleteSchedule(item.id)} style={{ marginLeft: "10px" }}>
-                삭제
-              </button>
-            )}
+            {isAdmin && <button onClick={() => deleteSchedule(item.id)} style={{ marginLeft: "10px" }}>삭제</button>}
           </div>
         ))}
-
         {isAdmin && (
           <div style={{ marginTop: "15px" }}>
             <input type="date" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} />
@@ -394,109 +362,132 @@ export default function App() {
         )}
       </div>
 
-      {/* 관리자 로그인/로그아웃 */}
+      {/* 관리자 폼 */}
       {!isAdmin ? (
         <div style={{ marginBottom: "20px" }}>
-          <input
-            type="password"
-            placeholder="관리자 비밀번호"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={{ padding: "8px", borderRadius: "6px" }}
-          />
-          <button onClick={login} style={{ marginLeft: "10px", padding: "8px 12px" }}>
-            로그인
-          </button>
+          <input type="password" placeholder="관리자 비밀번호" value={password} onChange={(e) => setPassword(e.target.value)} style={{ padding: "8px", borderRadius: "6px" }} />
+          <button onClick={login} style={{ marginLeft: "10px", padding: "8px 12px" }}>로그인</button>
         </div>
       ) : (
         <div style={{ marginBottom: "20px" }}>
-          <strong>관리자 모드</strong>
-          <button onClick={logout} style={{ marginLeft: "10px" }}>
-            로그아웃
-          </button>
+          <strong>관리자 모드</strong> <button onClick={logout} style={{ marginLeft: "10px" }}>로그아웃</button>
         </div>
       )}
 
-      {/* 메인 통계 그리드 */}
+      {/* 종합 스탯 카드 */}
       <div className="stat-grid">
-        <div className="stat-box">
-          <h2>{members.length}</h2>
-          <p>클랜원</p>
-        </div>
-        <div className="stat-box">
-          <h2>{ranking[0]?.elo || 1000}</h2>
-          <p>최고 ELO</p>
-        </div>
-        <div className="stat-box">
-          <h2>{winRateRanking.length}</h2>
-          <p>랭킹 등록 인원</p>
-        </div>
-        <div className="stat-box">
-          <h2>{clanWinRate}%</h2>
-          <p>클랜전 승률 ({clanWins}승 {clanLosses}패)</p>
-        </div>
+        <div className="stat-box"><h2>{members.length}</h2><p>클랜원</p></div>
+        <div className="stat-box"><h2>{ranking[0]?.elo || 1000}</h2><p>최고 ELO</p></div>
+        <div className="stat-box"><h2>{winRateRanking.length}</h2><p>랭킹 등록 인원</p></div>
+        <div className="stat-box"><h2>{clanWinRate}%</h2><p>클랜전 승률 ({clanWins}승 {clanLosses}패)</p></div>
       </div>
 
-      {/* 1. 홈 페이지 추가 데이터 (기본 뷰) */}
+      {/* ==================== HOME VIEW ==================== */}
       {page === "home" && (
         <div style={{ marginTop: "20px" }}>
-          <input
-            placeholder="닉네임 검색"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ width: "100%", padding: "12px", marginBottom: "20px", borderRadius: "8px" }}
-          />
+          
+          {/* 종족별 분포 시각화 차트 그래프 */}
+          <div style={{ background: "#1e293b", padding: "20px", borderRadius: "12px", marginBottom: "20px" }}>
+            <h3 style={{ marginTop: 0, marginBottom: "15px" }}>📊 종족별 구성 분포</h3>
+            <div style={{ display: "grid", gap: "12px" }}>
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px", fontSize: "14px" }}>
+                  <span>🔵 Terran ({terranCount}명)</span><span>{tPercent}%</span>
+                </div>
+                <div style={{ background: "#334155", width: "100%", height: "16px", borderRadius: "4px", overflow: "hidden" }}>
+                  <div style={{ background: "#3b82f6", width: `${tPercent}%`, height: "100%" }}></div>
+                </div>
+              </div>
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px", fontSize: "14px" }}>
+                  <span>🔴 Zerg ({zergCount}명)</span><span>{zPercent}%</span>
+                </div>
+                <div style={{ background: "#334155", width: "100%", height: "16px", borderRadius: "4px", overflow: "hidden" }}>
+                  <div style={{ background: "#ef4444", width: `${zPercent}%`, height: "100%" }}></div>
+                </div>
+              </div>
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px", fontSize: "14px" }}>
+                  <span>🟡 Protoss ({protossCount}명)</span><span>{pPercent}%</span>
+                </div>
+                <div style={{ background: "#334155", width: "100%", height: "16px", borderRadius: "4px", overflow: "hidden" }}>
+                  <div style={{ background: "#eab308", width: `${pPercent}%`, height: "100%" }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 티어별 인원 현황 */}
+          <div style={{ background: "#1e293b", padding: "20px", borderRadius: "12px", marginBottom: "20px" }}>
+            <h3 style={{ marginTop: 0, marginBottom: "12px" }}>🎖️ 티어별 인원 분포</h3>
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              {Object.keys(tierMap).sort().map(tier => (
+                <div key={tier} style={{ background: "#0f172a", padding: "10px 15px", borderRadius: "8px", textAlign: "center", minWidth: "70px" }}>
+                  <div style={{ fontWeight: "bold", color: "#60a5fa", fontSize: "18px" }}>{tier}</div>
+                  <div style={{ fontSize: "13px", color: "#94a3b8", marginTop: "2px" }}>{tierMap[tier]}명</div>
+                </div>
+              ))}
+              {Object.keys(tierMap).length === 0 && <p style={{ color: "#94a3b8", margin: 0 }}>등록된 멤버가 없습니다.</p>}
+            </div>
+          </div>
+
+          {/* 클랜전 승률 TOP 5 메인 배치 */}
+          <div style={{ background: "#1e293b", padding: "20px", borderRadius: "12px", marginBottom: "20px" }}>
+            <h3 style={{ marginTop: 0 }}>🏅 클랜전 개인 승률 TOP 5</h3>
+            <div style={{ display: "grid", gap: "8px" }}>
+              {winRateRanking.slice(0, 5).map((m, i) => (
+                <div key={m.id} style={{ display: "flex", justifyContent: "space-between", background: "#0f172a", padding: "10px 15px", borderRadius: "8px" }}>
+                  <span><strong>{i + 1}위</strong> - {m.nickname} ({m.race})</span>
+                  <span style={{ color: "#f59e0b", fontWeight: "bold" }}>{m.winRate.toFixed(1)}% ({m.wins}승 {m.losses}패)</span>
+                </div>
+              ))}
+              {winRateRanking.length === 0 && <p style={{ color: "#94a3b8", margin: 0 }}>데이터가 존재하지 않습니다.</p>}
+            </div>
+          </div>
+
+          <input placeholder="닉네임 검색" value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: "100%", padding: "12px", marginBottom: "20px", borderRadius: "8px" }} />
           <h2>클랜원 수 : {filteredMembers.length}</h2>
 
-          <div style={{ marginBottom: "16px", marginTop: "8px" }}>
+          <div style={{ marginBottom: "16px" }}>
             <h3>🏆 ELO TOP 10</h3>
             {ranking.slice(0, 10).map((m, i) => (
-              <div key={m.id} style={{ marginBottom: "6px" }}>
-                {i + 1}위 - {m.nickname} : {m.elo || 1000} ({m.race})
-              </div>
+              <div key={m.id} style={{ marginBottom: "6px" }}>{i + 1}위 - {m.nickname} : {m.elo || 1000} ({m.race})</div>
             ))}
           </div>
 
           <div className="recent-match-box" style={{ marginBottom: "24px" }}>
-            <h3>⚔️ 최근 경기</h3>
+            <h3>⚔️ 최근 내부 경기</h3>
             {matches.slice(0, 10).map((match) => (
               <div key={match.id} style={{ marginBottom: "8px" }}>
-                🏆 {match.winner} VS ❌ {match.loser} <br />
-                <small style={{ color: "#94a3b8" }}>{match.date}</small>
+                🏆 {match.winner} VS ❌ {match.loser} <br /><small style={{ color: "#94a3b8" }}>{match.date}</small>
               </div>
             ))}
           </div>
 
           {isAdmin && (
             <div style={{ background: "#1e293b", padding: "20px", borderRadius: "12px", marginBottom: "24px" }}>
-              <h2>경기 결과 등록</h2>
+              <h2>내부 경기 결과 등록</h2>
               <div style={{ marginBottom: "12px" }}>
                 <label style={{ marginRight: "8px" }}>승자</label>
                 <select value={winner} onChange={(e) => setWinner(e.target.value)} style={{ padding: "8px", borderRadius: "6px" }}>
                   <option value="">선택하세요</option>
-                  {members.map((member) => (
-                    <option key={member.id} value={member.id}>{member.nickname}</option>
-                  ))}
+                  {members.map((member) => <option key={member.id} value={member.id}>{member.nickname}</option>)}
                 </select>
               </div>
               <div style={{ marginBottom: "12px" }}>
                 <label style={{ marginRight: "8px" }}>패자</label>
                 <select value={loser} onChange={(e) => setLoser(e.target.value)} style={{ padding: "8px", borderRadius: "6px" }}>
                   <option value="">선택하세요</option>
-                  {members.map((member) => (
-                    <option key={member.id} value={member.id}>{member.nickname}</option>
-                  ))}
+                  {members.map((member) => <option key={member.id} value={member.id}>{member.nickname}</option>)}
                 </select>
               </div>
-              <button onClick={registerMatch} disabled={loading} style={{ padding: "10px 20px", borderRadius: "8px" }}>
-                {loading ? "등록 중..." : "등록"}
-              </button>
+              <button onClick={registerMatch} disabled={loading} style={{ padding: "10px 20px", borderRadius: "8px" }}>{loading ? "등록 중..." : "등록"}</button>
             </div>
           )}
         </div>
       )}
 
-      {/* 2. 랭킹 페이지 */}
+      {/* ==================== RANKING VIEW ==================== */}
       {page === "ranking" && (
         <div className="rank-card" style={{ marginTop: "20px" }}>
           <h3>🏅 클랜전 승률 TOP 5</h3>
@@ -509,119 +500,62 @@ export default function App() {
         </div>
       )}
 
-      {/* 3. 게시판 페이지 (댓글 기능 탑재) */}
+      {/* ==================== BOARD VIEW ==================== */}
       {page === "board" && (
         <div className="rank-card" style={{ marginTop: "20px" }}>
           <h2>📝 자유게시판</h2>
-
-          {/* 글쓰기 폼 (누구나 혹은 관리자) */}
           <div style={{ background: "#1e293b", padding: "15px", borderRadius: "10px", marginBottom: "20px" }}>
             <h3 style={{ marginTop: 0 }}>새 글 작성</h3>
-            <input
-              type="text"
-              placeholder="작성자"
-              value={postAuthor}
-              onChange={(e) => setPostAuthor(e.target.value)}
-              style={{ padding: "8px", marginRight: "10px", borderRadius: "4px" }}
-            />
-            <input
-              type="text"
-              placeholder="게시글 제목 입력"
-              value={postTitle}
-              onChange={(e) => setPostTitle(e.target.value)}
-              style={{ padding: "8px", width: "50%", borderRadius: "4px", marginRight: "10px" }}
-            />
-            <textarea
-              placeholder="내용 입력"
-              value={postContent}
-              onChange={(e) => setPostContent(e.target.value)}
-              rows={3}
-              style={{ width: "100%", marginTop: "10px", padding: "10px", borderRadius: "6px", display: "block" }}
-            />
-            <button onClick={addPost} style={{ marginTop: "10px", padding: "8px 16px" }}>
-              글쓰기
-            </button>
+            <input type="text" placeholder="작성자" value={postAuthor} onChange={(e) => setPostAuthor(e.target.value)} style={{ padding: "8px", marginRight: "10px", borderRadius: "4px" }} />
+            <input type="text" placeholder="게시글 제목 입력" value={postTitle} onChange={(e) => setPostTitle(e.target.value)} style={{ padding: "8px", width: "50%", borderRadius: "4px", marginRight: "10px" }} />
+            <textarea placeholder="내용 입력" value={postContent} onChange={(e) => setPostContent(e.target.value)} rows={3} style={{ width: "100%", marginTop: "10px", padding: "10px", borderRadius: "6px", display: "block" }} />
+            <button onClick={addPost} style={{ marginTop: "10px", padding: "8px 16px" }}>글쓰기</button>
           </div>
 
-          {/* 게시글 리스트 */}
-          {posts.length === 0 ? (
-            <div>등록된 게시글이 없습니다.</div>
-          ) : (
+          {posts.length === 0 ? <div>등록된 게시글이 없습니다.</div> : (
             <div style={{ display: "grid", gap: "10px" }}>
               {posts.map((post) => (
-                <div
-                  key={post.id}
-                  className="member-card"
-                  onClick={() => setSelectedPost(post)}
-                  style={{ cursor: "pointer", background: "#1e293b", padding: "15px", borderRadius: "8px" }}
-                >
+                <div key={post.id} className="member-card" onClick={() => setSelectedPost(post)} style={{ cursor: "pointer", background: "#1e293b", padding: "15px", borderRadius: "8px" }}>
                   <h3 style={{ margin: "0 0 5px 0" }}>{post.title}</h3>
                   <small style={{ color: "#94a3b8" }}>작성자: {post.author} | {post.createdAt}</small>
-                  {isAdmin && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deletePost(post.id);
-                      }}
-                      style={{ marginLeft: "10px", float: "right" }}
-                    >
-                      삭제
-                    </button>
-                  )}
+                  {isAdmin && <button onClick={(e) => { e.stopPropagation(); deletePost(post.id); }} style={{ marginLeft: "10px", float: "right" }}>삭제</button>}
                 </div>
               ))}
             </div>
           )}
 
-          {/* 게시글 상세보기 및 댓글창 */}
           {selectedPost && (
             <div style={{ background: "#111827", padding: "20px", borderRadius: "12px", marginTop: "20px", border: "1px solid #334155" }}>
               <h2>{selectedPost.title}</h2>
               <p>👤 작성자 : {selectedPost.author} | 📅 작성일 : {selectedPost.createdAt}</p>
               <hr style={{ borderColor: "#334155" }} />
               <p style={{ whiteSpace: "pre-wrap", minHeight: "100px" }}>{selectedPost.content}</p>
-              
               <hr style={{ borderColor: "#334155" }} />
               
-              {/* 💬 댓글 영역 */}
               <h3>💬 댓글 ({selectedPost.comments ? selectedPost.comments.length : 0})</h3>
               <div style={{ marginBottom: "15px" }}>
                 {selectedPost.comments && selectedPost.comments.map((cmt) => (
                   <div key={cmt.id} style={{ background: "#1e293b", padding: "10px", borderRadius: "6px", marginBottom: "8px" }}>
-                    <div style={{ display: "flex", justifyContent: "between", fontSize: "0.85rem", color: "#94a3b8" }}>
-                      <strong>{cmt.author}</strong> <span style={{ marginLeft: "10px" }}>{cmt.createdAt}</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", color: "#94a3b8" }}>
+                      <strong>{cmt.author}</strong> <span>{cmt.createdAt}</span>
                     </div>
                     <div style={{ marginTop: "4px" }}>{cmt.content}</div>
                   </div>
                 ))}
               </div>
 
-              {/* 댓글 작성란 */}
               <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-                <input 
-                  placeholder="이름" 
-                  value={commentAuthor} 
-                  onChange={(e) => setCommentAuthor(e.target.value)} 
-                  style={{ width: "20%", padding: "8px", borderRadius: "4px" }}
-                />
-                <input 
-                  placeholder="댓글 내용을 입력하세요" 
-                  value={commentContent} 
-                  onChange={(e) => setCommentContent(e.target.value)} 
-                  style={{ width: "70%", padding: "8px", borderRadius: "4px" }}
-                />
+                <input placeholder="이름" value={commentAuthor} onChange={(e) => setCommentAuthor(e.target.value)} style={{ width: "20%", padding: "8px", borderRadius: "4px" }} />
+                <input placeholder="댓글 내용을 입력하세요" value={commentContent} onChange={(e) => setCommentContent(e.target.value)} style={{ width: "70%", padding: "8px", borderRadius: "4px" }} />
                 <button onClick={addComment} style={{ width: "10%" }}>등록</button>
               </div>
-
-              <button onClick={() => setSelectedPost(null)} style={{ marginTop: "20px", display: "block" }}>
-                닫기
-              </button>
+              <button onClick={() => setSelectedPost(null)} style={{ marginTop: "20px", display: "block" }}>닫기</button>
             </div>
           )}
         </div>
       )}
 
-      {/* 4. 클랜원 리스트 페이지 */}
+      {/* ==================== MEMBERS VIEW ==================== */}
       {page === "members" && (
         <div style={{ marginTop: "20px" }}>
           {isAdmin && (
@@ -651,11 +585,8 @@ export default function App() {
                   <div className="stats" style={{ marginTop: "5px" }}>
                     <span>🏆 승 {member.wins || 0} </span> | <span> 💀 패 {member.losses || 0}</span>
                   </div>
-                  <div className="elo" style={{ marginTop: "5px", fontWeight: "bold", color: "#f59e0b" }}>
-                    ⚡ ELO {member.elo || 1000}
-                  </div>
+                  <div className="elo" style={{ marginTop: "5px", fontWeight: "bold", color: "#f59e0b" }}>⚡ ELO {member.elo || 1000}</div>
                 </div>
-
                 {isAdmin && (
                   <div className="admin-buttons" style={{ marginTop: "10px", display: "flex", gap: "5px" }}>
                     <button onClick={() => updateScore(member.id, "wins")}>+WIN</button>
@@ -670,10 +601,10 @@ export default function App() {
         </div>
       )}
 
-      {/* 5. 경기 기록 페이지 */}
+      {/* ==================== MATCHES VIEW ==================== */}
       {page === "matches" && (
         <div style={{ marginTop: "20px" }}>
-          <h3>⚔️ 전체 경기 기록</h3>
+          <h3>⚔️ 전체 내부 경기 기록</h3>
           {matches.map((match) => (
             <div key={match.id} style={{ background: "#1e293b", padding: "10px", marginBottom: "8px", borderRadius: "6px" }}>
               🏆 승리: <strong style={{ color: "#22c55e" }}>{match.winner}</strong> VS ❌ 패배: <strong style={{ color: "#ef4444" }}>{match.loser}</strong>
@@ -683,11 +614,10 @@ export default function App() {
         </div>
       )}
 
-      {/* 6. 클랜전 기록 페이지 */}
+      {/* ==================== CLAN WAR VIEW ==================== */}
       {page === "clanwar" && (
         <div className="rank-card" style={{ marginTop: "20px" }}>
           <h2>⚔️ THUG 클랜전 기록</h2>
-
           {isAdmin && (
             <div style={{ background: "#1e293b", padding: "15px", borderRadius: "10px", marginBottom: "20px" }}>
               <input placeholder="상대 클랜" value={enemyClan} onChange={(e) => setEnemyClan(e.target.value)} />
@@ -714,16 +644,14 @@ export default function App() {
               <div style={{ fontWeight: "bold", color: war.result === "승리" ? "#22c55e" : "#ef4444" }}>{war.result}</div>
               <small style={{ color: "#94a3b8" }}>{war.date}</small>
               {isAdmin && (
-                <button onClick={() => deleteClanWar(war.id)} style={{ marginTop: "10px", display: "block" }}>
-                  삭제
-                </button>
+                <button onClick={() => deleteClanWar(war.id)} style={{ marginTop: "10px", display: "block" }}>삭제</button>
               )}
             </div>
           ))}
         </div>
       )}
 
-      {/* 7. 갤러리 페이지 Placeholder */}
+      {/* ==================== GALLERY VIEW ==================== */}
       {page === "gallery" && (
         <div style={{ marginTop: "20px", textAlign: "center", padding: "40px" }}>
           <h2>🖼️ 갤러리 준비 중</h2>
