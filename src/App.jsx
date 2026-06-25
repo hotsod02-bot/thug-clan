@@ -11,23 +11,33 @@ import {
   addDoc,
 } from "firebase/firestore";
 
-// 텍스트 데이터를 기반으로 정밀 정제한 클랜전 기록 (초기값 백업용)
+// 주신 텍스트 데이터를 기반으로 정밀 가공한 초기 클랜전 데이터 (출전 라인업 정보 포함)
 const initialClanWars = [
-  { id: "raw-1", enemyClan: "1st", ourScore: 5, enemyScore: 1, result: "승리", date: "2026-05-30" },
-  { id: "raw-2", enemyClan: "스타스쿨", ourScore: 1, enemyScore: 4, result: "패배", date: "2026-05-31" },
-  { id: "raw-3", enemyClan: "New", ourScore: 4, enemyScore: 3, result: "승리", date: "2026-06-01" },
-  { id: "raw-4", enemyClan: "BEAST", ourScore: 4, enemyScore: 2, result: "승리", date: "2026-06-02" },
-  { id: "raw-5", enemyClan: "STC", ourScore: 4, enemyScore: 2, result: "승리", date: "2026-06-03" },
-  { id: "raw-6", enemyClan: "은하팸", ourScore: 2, enemyScore: 3, result: "패배", date: "2026-06-04" },
-  { id: "raw-7", enemyClan: "Feisty (1차)", ourScore: 3, enemyScore: 2, result: "승리", date: "2026-06-05" },
-  { id: "raw-8", enemyClan: "sea+", ourScore: 0, enemyScore: 5, result: "패배", date: "2026-06-07" },
-  { id: "raw-9", enemyClan: "Feisty (2차)", ourScore: 6, enemyScore: 2, result: "승리", date: "2026-06-09" },
-  { id: "raw-10", enemyClan: "Feisty (3차)", ourScore: 6, enemyScore: 1, result: "승리", date: "2026-06-12" },
-  { id: "raw-11", enemyClan: "Rock", ourScore: 2, enemyScore: 4, result: "패배", date: "2026-06-14" },
-  { id: "raw-12", enemyClan: "Feisty (4차)", ourScore: 2, enemyScore: 5, result: "패배", date: "2026-06-16" },
-  { id: "raw-13", enemyClan: "숲스타", ourScore: 2, enemyScore: 3, result: "패배", date: "2026-06-20" },
-  { id: "raw-14", enemyClan: "STC (2차)", ourScore: 2, enemyScore: 4, result: "패배", date: "2026-06-22" }
+  { id: "raw-1", enemyClan: "1st", ourScore: 5, enemyScore: 1, result: "승리", date: "2026-05-30", lineup: "1세트: 정대만(Z) 승, 2세트: GG(P) 승, 3세트: 백호(Z) 승, 4세트: GX(Z) 승, 5세트: 럭키(T) 승, 6세트: 프린스(T) 승" },
+  { id: "raw-2", enemyClan: "스타스쿨", ourScore: 1, enemyScore: 4, result: "패배", date: "2026-05-31", lineup: "1세트: 캐처버(Z) 패, 2세트: 카카루(T) 패, 3세트: 케이틀린(P) 패, 4세트: 테란은약하다(T) 패, 5세트: 깡북이(Z) 패" },
+  { id: "raw-3", enemyClan: "New", ourScore: 4, enemyScore: 3, result: "승리", date: "2026-06-01", lineup: "1세트: 커즈(T) 승, 2세트: 백호(Z) 패, 3세트: Gx(Z) 패, 4세트: toss(P) 승, 5세트: 럭키(T) 승, 6세트: 산타(P) 패, 7세트: 참새(P) 승" },
+  { id: "raw-4", enemyClan: "BEAST", ourScore: 4, enemyScore: 2, result: "승리", date: "2026-06-02", lineup: "1세트: 프린스(T) 승, 2세트: 팔로(P) 패, 3세트: toss(P) 승, 4세트: 백호(Z) 승, 5세트: 참새(P) 승, 6세트: 럭키(T) 패" },
+  { id: "raw-5", enemyClan: "STC", ourScore: 4, enemyScore: 2, result: "승리", date: "2026-06-03", lineup: "1세트: 소림(Z) 패, 2세트: toss(Z) 승, 3세트: 잠마(T) 승, 4세트: 커즈(T) 승, 5세트: 제훈(Z) 패, 6세트: 참새(P) 승" },
+  { id: "raw-6", enemyClan: "은하팸", ourScore: 2, enemyScore: 3, result: "패배", date: "2026-06-04", lineup: "1세트: 커즈(T) 승, 2세트: 보초(T) 패, 3세트: 참새(P) 패, 4세트: GG(P) 승, 5세트: 산타(P) 패" },
+  { id: "raw-7", enemyClan: "Feisty (1차)", ourScore: 3, enemyScore: 2, result: "승리", date: "2026-06-05", lineup: "1세트: 정대만(Z) 패, 2세트: toss(Z) 승, 3세트: 블루(Z) 승, 4세트: 직구(T) 승, 5세트: 럭키(T) 패" },
+  { id: "raw-8", enemyClan: "sea+", ourScore: 0, enemyScore: 5, result: "패배", date: "2026-06-07", lineup: "1세트: 플러스(T) 패, 2세트: 로카(T) 패, 3세트: 아누비스(T) 패, 4세트: GG(P) 패, 5세트: 토스(Z) 패" },
+  { id: "raw-9", enemyClan: "Feisty (2차)", ourScore: 6, enemyScore: 2, result: "승리", date: "2026-06-09", lineup: "1세트: 백호(Z) 승, 2세트: 아누비스(T) 패, 3세트: 팔로(P) 승, 4세트: 032(Z) 승, 5세트: 럭키(T) 패, 6세트: 광주(P) 승, 7세트: 정(T) 승, 8세트: 토리(Z) 승" },
+  { id: "raw-10", enemyClan: "Feisty (3차)", ourScore: 6, enemyScore: 1, result: "승리", date: "2026-06-12", lineup: "1세트: blue(Z) 승, 2세트: Jik9(T) 승, 3세트: 032(Z) 승, 4세트: 백호(Z) 패, 5세트: Sung(T) 승, 6세트: AJ(P) 승, 7세트: hoban(Z) 승" },
+  { id: "raw-11", enemyClan: "Rock", ourScore: 2, enemyScore: 4, result: "패배", date: "2026-06-14", lineup: "1세트: 럭키(T) 패, 2세트: 팔로(P) 패, 3세트: 기백(P) 승, 4세트: Gx(Z) 패, 5세트: 정대만(Z) 패, 6세트: 에스(Z) 패" },
+  { id: "raw-12", enemyClan: "Feisty (4차)", ourScore: 2, enemyScore: 5, result: "패배", date: "2026-06-16", lineup: "1세트: Ma(P) 패, 2세트: Gx(P) 패, 3세트: 이기자(P) 승, 4세트: 에스(Z) 패, 5세트: 커즈(T) 승, 6세트: 제훈(Z) 패, 7세트: 백호(Z) 패" },
+  { id: "raw-13", enemyClan: "숲스타", ourScore: 2, enemyScore: 3, result: "패배", date: "2026-06-20", lineup: "1세트: 커즈(T) 승, 2세트: Show(P) 패, 3세트: S(Z) 패, 4세트: 소림(T) 패, 5세트: 지지(P) 승" },
+  { id: "raw-14", enemyClan: "STC (2차)", ourScore: 2, enemyScore: 4, result: "패배", date: "2026-06-22", lineup: "1세트: 백호(Z) 패, 2세트: 8059(T) 패, 3세트: 프린스(T) 패, 4세트: S(Z) 승, 5세트: gx(Z) 패, 6세트: 쇼(P) 승" }
 ];
+
+// 종족명 텍스트 정교화 헬퍼 함수
+const normalizeRace = (raceStr) => {
+  if (!raceStr) return "Terran";
+  const r = raceStr.trim().toLowerCase();
+  if (r.includes("저그") || r === "zerg" || r === "z") return "Zerg";
+  if (r.includes("프로토스") || r.includes("토스") || r === "protoss" || r === "p") return "Protoss";
+  if (r.includes("테란") || r === "terran" || r === "t") return "Terran";
+  return "Terran"; // 기본값
+};
 
 export default function App() {
   const [members, setMembers] = useState([]);
@@ -49,9 +59,12 @@ export default function App() {
   const [postContent, setPostContent] = useState("");
   const [clanWars, setClanWars] = useState([]);
 
+  // 클랜전 입력 관련 상태 수정 (출전 선수 명단 필드 추가)
   const [enemyClan, setEnemyClan] = useState("");
   const [ourScore, setOurScore] = useState("");
   const [enemyScore, setEnemyScore] = useState("");
+  const [clanWarLineup, setClanWarLineup] = useState(""); 
+  
   const [schedules, setSchedules] = useState([]);
   const [scheduleTitle, setScheduleTitle] = useState("");
   const [scheduleDate, setScheduleDate] = useState("");
@@ -61,7 +74,7 @@ export default function App() {
 
   const today = new Date().toLocaleDateString("ko-KR");
 
-  // 데이터 로드
+  // 데이터 로드 함수군
   const loadPosts = async () => {
     const snapshot = await getDocs(collection(db, "posts"));
     const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -76,7 +89,14 @@ export default function App() {
 
   const loadMembers = async () => {
     const snapshot = await getDocs(collection(db, "members"));
-    const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const data = snapshot.docs.map((d) => {
+      const rawData = d.data();
+      return {
+        id: d.id,
+        ...rawData,
+        race: normalizeRace(rawData.race) // 종족 영문 매핑 가공 처리
+      };
+    });
     setMembers(data);
   };
 
@@ -91,10 +111,7 @@ export default function App() {
     const snapshot = await getDocs(collection(db, "clanwars"));
     const firebaseData = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
     
-    // 파이어베이스 데이터와 주신 텍스트 데이터를 결합 (중복 방지 처리 가능)
     const combined = [...firebaseData, ...initialClanWars.filter(item => !firebaseData.some(f => f.enemyClan === item.enemyClan && f.date === item.date))];
-    
-    // 날짜 최신순 정렬
     combined.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     setClanWars(combined);
   };
@@ -144,7 +161,7 @@ export default function App() {
     }
     await addDoc(collection(db, "members"), {
       nickname: newNickname,
-      race: newRace,
+      race: normalizeRace(newRace), // 저장 시점에 영문화 처리 보장
       tier: newTier.toUpperCase(),
       wins: 0,
       losses: 0,
@@ -260,7 +277,7 @@ export default function App() {
     setLoading(false);
   };
 
-  // 외부 클랜전 기록 추가/삭제
+  // 외부 클랜전 기록 추가/삭제 (선수명단 기록 포함)
   const addClanWar = async () => {
     if (!enemyClan || !ourScore || !enemyScore) { alert("모든 정보를 입력하세요"); return; }
     await addDoc(collection(db, "clanwars"), {
@@ -268,9 +285,10 @@ export default function App() {
       ourScore: Number(ourScore),
       enemyScore: Number(enemyScore),
       result: Number(ourScore) > Number(enemyScore) ? "승리" : "패배",
+      lineup: clanWarLineup || "등록된 출전 선수 명단이 없습니다.",
       date: new Date().toLocaleDateString(),
     });
-    setEnemyClan(""); setOurScore(""); setEnemyScore("");
+    setEnemyClan(""); setOurScore(""); setEnemyScore(""); setClanWarLineup("");
     loadClanWars();
   };
 
@@ -284,7 +302,7 @@ export default function App() {
     loadClanWars();
   };
 
-  // 랭킹 및 분포 계산 로직
+  // 정제 및 통계 로직
   const filteredMembers = members.filter((m) => (m.nickname || "").toLowerCase().includes(search.toLowerCase()));
   const ranking = [...members].sort((a, b) => (b.elo || 1000) - (a.elo || 1000));
   
@@ -292,19 +310,20 @@ export default function App() {
   const clanLosses = clanWars.filter((w) => w.result === "패배").length;
   const clanWinRate = clanWins + clanLosses === 0 ? 0 : ((clanWins / (clanWins + clanLosses)) * 100).toFixed(1);
 
+  // 💥 변경 포인트: 최소 3경기 이상 필터링 적용된 랭킹 리스트 생성
   const winRateRanking = [...members]
     .map((m) => {
       const w = m.wins || 0; const l = m.losses || 0; const t = w + l;
       return { ...m, winRate: t === 0 ? 0 : (w / t) * 100 };
     })
-    .filter((m) => (m.wins || 0) + (m.losses || 0) >= 1)
+    .filter((m) => (m.wins || 0) + (m.losses || 0) >= 3) 
     .sort((a, b) => b.winRate - a.winRate);
 
   // 종족 통계 연산
   const totalCount = members.length || 1;
-  const terranCount = members.filter(m => m.race?.toLowerCase() === "terran").length;
-  const zergCount = members.filter(m => m.race?.toLowerCase() === "zerg").length;
-  const protossCount = members.filter(m => m.race?.toLowerCase() === "protoss").length;
+  const terranCount = members.filter(m => m.race === "Terran").length;
+  const zergCount = members.filter(m => m.race === "Zerg").length;
+  const protossCount = members.filter(m => m.race === "Protoss").length;
 
   const tPercent = ((terranCount / totalCount) * 100).toFixed(1);
   const zPercent = ((zergCount / totalCount) * 100).toFixed(1);
@@ -378,7 +397,7 @@ export default function App() {
       <div className="stat-grid">
         <div className="stat-box"><h2>{members.length}</h2><p>클랜원</p></div>
         <div className="stat-box"><h2>{ranking[0]?.elo || 1000}</h2><p>최고 ELO</p></div>
-        <div className="stat-box"><h2>{winRateRanking.length}</h2><p>랭킹 등록 인원</p></div>
+        <div className="stat-box"><h2>{winRateRanking.length}</h2><p>랭킹 등록 인원 (3경기+)</p></div>
         <div className="stat-box"><h2>{clanWinRate}%</h2><p>클랜전 승률 ({clanWins}승 {clanLosses}패)</p></div>
       </div>
 
@@ -431,17 +450,17 @@ export default function App() {
             </div>
           </div>
 
-          {/* 클랜전 승률 TOP 5 메인 배치 */}
+          {/* 💥 변경 포인트: 홈 화면 클랜전 승률 TOP 10 실시간 배치 (3전 이상 대상) */}
           <div style={{ background: "#1e293b", padding: "20px", borderRadius: "12px", marginBottom: "20px" }}>
-            <h3 style={{ marginTop: 0 }}>🏅 클랜전 개인 승률 TOP 5</h3>
+            <h3 style={{ marginTop: 0 }}>🏅 클랜전 개인 승률 TOP 10 <span style={{ fontSize: "12px", color: "#94a3b8", fontWeight: "normal" }}>(3경기 이상 출전)</span></h3>
             <div style={{ display: "grid", gap: "8px" }}>
-              {winRateRanking.slice(0, 5).map((m, i) => (
+              {winRateRanking.slice(0, 10).map((m, i) => (
                 <div key={m.id} style={{ display: "flex", justifyContent: "space-between", background: "#0f172a", padding: "10px 15px", borderRadius: "8px" }}>
                   <span><strong>{i + 1}위</strong> - {m.nickname} ({m.race})</span>
                   <span style={{ color: "#f59e0b", fontWeight: "bold" }}>{m.winRate.toFixed(1)}% ({m.wins}승 {m.losses}패)</span>
                 </div>
               ))}
-              {winRateRanking.length === 0 && <p style={{ color: "#94a3b8", margin: 0 }}>데이터가 존재하지 않습니다.</p>}
+              {winRateRanking.length === 0 && <p style={{ color: "#94a3b8", margin: 0 }}>조건을 만족하는 선수가 존재하지 않습니다.</p>}
             </div>
           </div>
 
@@ -490,13 +509,15 @@ export default function App() {
       {/* ==================== RANKING VIEW ==================== */}
       {page === "ranking" && (
         <div className="rank-card" style={{ marginTop: "20px" }}>
-          <h3>🏅 클랜전 승률 TOP 5</h3>
-          {winRateRanking.slice(0, 5).map((m, i) => (
+          {/* 💥 변경 포인트: 랭킹 탭 클랜전 개인 승률 TOP 10 리스트 배치 (3전 이상 대상) */}
+          <h3>🏅 클랜전 승률 TOP 10 <span style={{ fontSize: "12px", color: "#94a3b8", fontWeight: "normal" }}>(3경기 이상 출전)</span></h3>
+          {winRateRanking.slice(0, 10).map((m, i) => (
             <div key={m.id} style={{ background: "#1e293b", padding: "10px", marginBottom: "8px", borderRadius: "8px" }}>
-              <strong>{i + 1}위</strong> - {m.nickname}
+              <strong>{i + 1}위</strong> - {m.nickname} ({m.race})
               <div>승률: {m.winRate.toFixed(1)}% ({m.wins || 0}승 {m.losses || 0}패)</div>
             </div>
           ))}
+          {winRateRanking.length === 0 && <p style={{ color: "#94a3b8" }}>조건을 만족하는 선수가 없습니다.</p>}
         </div>
       )}
 
@@ -618,12 +639,26 @@ export default function App() {
       {page === "clanwar" && (
         <div className="rank-card" style={{ marginTop: "20px" }}>
           <h2>⚔️ THUG 클랜전 기록</h2>
+          
+          {/* 💥 변경 포인트: 클랜전 등록 시 출전 명단 기록 폼 추가 */}
           {isAdmin && (
             <div style={{ background: "#1e293b", padding: "15px", borderRadius: "10px", marginBottom: "20px" }}>
-              <input placeholder="상대 클랜" value={enemyClan} onChange={(e) => setEnemyClan(e.target.value)} />
-              <input placeholder="THUG 점수" value={ourScore} onChange={(e) => setOurScore(e.target.value)} style={{ marginLeft: "10px", width: "80px" }} />
-              <input placeholder="상대 점수" value={enemyScore} onChange={(e) => setEnemyScore(e.target.value)} style={{ marginLeft: "10px", width: "80px" }} />
-              <button onClick={addClanWar} style={{ marginLeft: "10px" }}>등록</button>
+              <h3 style={{ marginTop: 0, marginBottom: "10px" }}>클랜전 결과 기록하기</h3>
+              <div style={{ marginBottom: "10px" }}>
+                <input placeholder="상대 클랜" value={enemyClan} onChange={(e) => setEnemyClan(e.target.value)} />
+                <input placeholder="THUG 점수" value={ourScore} onChange={(e) => setOurScore(e.target.value)} style={{ marginLeft: "10px", width: "80px" }} />
+                <input placeholder="상대 점수" value={enemyScore} onChange={(e) => setEnemyScore(e.target.value)} style={{ marginLeft: "10px", width: "80px" }} />
+              </div>
+              <div style={{ marginBottom: "10px" }}>
+                <textarea 
+                  placeholder="출전선수 명단 및 세트별 결과 기록 (예: 1세트 정대만 승, 2세트 백호 패...)" 
+                  value={clanWarLineup} 
+                  onChange={(e) => setClanWarLineup(e.target.value)} 
+                  rows={3}
+                  style={{ width: "100%", padding: "10px", borderRadius: "6px", background: "#0f172a", color: "#fff", border: "1px solid #334155" }}
+                />
+              </div>
+              <button onClick={addClanWar}>클랜전 기록 저장</button>
             </div>
           )}
 
@@ -639,12 +674,21 @@ export default function App() {
                 borderLeft: war.result === "승리" ? "5px solid #22c55e" : "5px solid #ef4444",
               }}
             >
-              <h3>THUG VS {war.enemyClan}</h3>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3>THUG VS {war.enemyClan}</h3>
+                <small style={{ color: "#94a3b8" }}>{war.date}</small>
+              </div>
               <h2>{war.ourScore} : {war.enemyScore}</h2>
-              <div style={{ fontWeight: "bold", color: war.result === "승리" ? "#22c55e" : "#ef4444" }}>{war.result}</div>
-              <small style={{ color: "#94a3b8" }}>{war.date}</small>
+              <div style={{ fontWeight: "bold", color: war.result === "승리" ? "#22c55e" : "#ef4444", marginBottom: "12px" }}>{war.result}</div>
+              
+              {/* 💥 변경 포인트: 출전선수 명단 렌더링 파트 */}
+              <div style={{ background: "#0f172a", padding: "12px", borderRadius: "6px", fontSize: "14px", border: "1px solid #334155" }}>
+                <strong style={{ color: "#60a5fa", display: "block", marginBottom: "6px" }}>🏃 출전 선수 명단 및 결과</strong>
+                <p style={{ margin: 0, whiteSpace: "pre-wrap", color: "#cbd5e1", lineHeight: "1.5" }}>{war.lineup || "기록된 출전 명단이 없습니다."}</p>
+              </div>
+
               {isAdmin && (
-                <button onClick={() => deleteClanWar(war.id)} style={{ marginTop: "10px", display: "block" }}>삭제</button>
+                <button onClick={() => deleteClanWar(war.id)} style={{ marginTop: "12px" }}>기록 삭제</button>
               )}
             </div>
           ))}
