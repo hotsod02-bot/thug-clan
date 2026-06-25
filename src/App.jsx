@@ -117,7 +117,7 @@ useEffect(() => {
   const deleteSchedule = async (id) => {
   await deleteDoc(doc(db, "schedules", id));
 
-  loadSchedules();
+const loadSchedules = async () => {
 };
 const addSchedule = async () => {
   
