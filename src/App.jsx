@@ -347,7 +347,7 @@ export default function App() {
         <div>📅 {today}</div>
         <div>👥 현재 접속자 : 0명</div>
         <div>📢 THUG CLAN 공식 홈페이지</div>
-        <div>💰 후원계좌 : 카카오뱅크 3333-11-7317866</div>
+        <div>💰 후원계좌 : </div>
       </div>
 
       {/* 네비게이션 */}
