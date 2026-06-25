@@ -18,9 +18,6 @@ export default function App() {
 const [newRace, setNewRace] = useState("Terran");
 const [newTier, setNewTier] = useState("");
   const [winner, setWinner] = useState("");
-  const [newNickname, setNewNickname] = useState("");
-const [newRace, setNewRace] = useState("Terran");
-const [newTier, setNewTier] = useState("");
   const [loser, setLoser] = useState("");
   const [loading, setLoading] = useState(false);
   const [password, setPassword] = useState("");
