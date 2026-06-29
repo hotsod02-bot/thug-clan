@@ -1,5 +1,5 @@
 import "./App.css";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { db } from "./firebase";
 
 import {
@@ -41,14 +41,14 @@ const normalizeRace = (raceStr) => {
   return "Terran";
 };
 
-// 💥 5대 등급 정보 및 UI 정의 연산 (새로운 점수 기준 적용)
+// 🃏 THUG CLAN TIER LIST 5대 등급 정보 테마 정의
 const getThugRank = (elo) => {
   const score = elo || 1000;
-  if (score >= 2244) return { name: "GOD", color: "#f59e0b", badge: "🔱 GOD" };
-  if (score >= 2028) return { name: "KING", color: "#38bdf8", badge: "👑 KING" };
-  if (score >= 1740) return { name: "JACK", color: "#a855f7", badge: "⚔️ JACK" };
-  if (score >= 1540) return { name: "JOKER", color: "#10b981", badge: "🃏 JOKER" };
-  return { name: "설거지", color: "#94a3b8", badge: "🧽 설거지" };
+  if (score >= 2244) return { name: "GOD", color: "#ef4444", bg: "#2d1b1b", badge: "🔱 GOD" };
+  if (score >= 2028) return { name: "KING", color: "#f97316", bg: "#2d221b", badge: "👑 KING" };
+  if (score >= 1740) return { name: "JACK", color: "#a855f7", bg: "#241b2d", badge: "⚔️ JACK" };
+  if (score >= 1540) return { name: "JOKER", color: "#10b981", bg: "#1b2d24", badge: "🃏 JOKER" };
+  return { name: "설거지", color: "#94a3b8", bg: "#1e293b", badge: "🧽 설거지" };
 };
 
 export default function App() {
@@ -71,15 +71,11 @@ export default function App() {
   const [postContent, setPostContent] = useState("");
   const [clanWars, setClanWars] = useState([]);
 
-  // DB 연동 실시간 공지사항 및 자체 회원 모킹 ID
   const [globalNotice, setGlobalNotice] = useState("THUG CLAN 클랜원 모집중 (관리자 상시 대기)");
-  const [myPlayerId, setMyPlayerId] = useState(""); // 현재 테스트 유저로 로그인/선택할 클랜원 ID
+  const [myPlayerId, setMyPlayerId] = useState(""); 
 
-  // 래더 시스템 관련 상태 추가
   const [isQueueing, setIsQueueing] = useState(false);
   const [matchedGame, setMatchedGame] = useState(null);
-
-  // 모달 팝업 상태 추가 (개인별 이력 조회)
   const [selectedProfile, setSelectedProfile] = useState(null);
 
   const [enemyClan, setEnemyClan] = useState("");
@@ -96,7 +92,7 @@ export default function App() {
 
   const today = new Date().toLocaleDateString("ko-KR");
 
-  // 데이터 로드 패키지
+  // 데이터 가공 및 로드 핸들러
   const loadPosts = async () => {
     const snapshot = await getDocs(collection(db, "posts"));
     const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -123,7 +119,7 @@ export default function App() {
       };
     });
     setMembers(data);
-    if(data.length > 0 && !myPlayerId) setMyPlayerId(data[0].id); // 기본 세팅
+    if(data.length > 0 && !myPlayerId) setMyPlayerId(data[0].id);
   };
 
   const loadMatches = async () => {
@@ -141,7 +137,6 @@ export default function App() {
     setClanWars(combined);
   };
 
-  // 실시간 공지사항 연동 처리
   const initNoticeListener = () => {
     onSnapshot(doc(db, "system", "notice"), (docSnap) => {
       if (docSnap.exists()) {
@@ -159,7 +154,6 @@ export default function App() {
     initNoticeListener();
   }, []);
 
-  // 💥 실시간 래더 자체 대기열 통합 리스너 정의
   useEffect(() => {
     if (!myPlayerId) return;
     const q = query(collection(db, "ladderQueue"), where("status", "==", "matched"));
@@ -185,7 +179,6 @@ export default function App() {
   };
   const logout = () => setIsAdmin(false);
 
-  // 💥 공지사항 관리자 라이브 업데이트 핸들러
   const editGlobalNotice = async () => {
     const newNot = prompt("수정할 전역 공지사항을 입력하세요:", globalNotice);
     if (newNot === null) return;
@@ -193,7 +186,6 @@ export default function App() {
     alert("공지사항이 전면 업데이트 되었습니다.");
   };
 
-  // 💥 래더 매치 검색 알고리즘 (Queue 진입 및 자가 매칭 로직)
   const toggleLadderQueue = async () => {
     const me = members.find(m => m.id === myPlayerId);
     if (!me) return alert("매칭을 돌릴 플레이어 프로필이 설정되지 않았습니다.");
@@ -233,7 +225,6 @@ export default function App() {
     }
   };
 
-  // 💥 개인 이력 상세 모달 계산 로직 함수 구현
   const openPlayerProfile = (player) => {
     const total = player.wins + player.losses;
     const wr = total === 0 ? 0 : ((player.wins / total) * 100).toFixed(1);
@@ -363,19 +354,27 @@ export default function App() {
   };
 
   const filteredMembers = members.filter((m) => (m.nickname || "").toLowerCase().includes(search.toLowerCase()));
-  const ranking = [...members].sort((a, b) => b.elo - a.elo);
+  
+  // ⚡ ELO 기준 정렬 완료된 랭킹 데이터 수립
+  const ranking = useMemo(() => {
+    return [...members].sort((a, b) => b.elo - a.elo);
+  }, [members]);
   
   const clanWins = clanWars.filter((w) => w.result === "승리").length;
   const clanLosses = clanWars.filter((w) => w.result === "패배").length;
   const clanWinRate = clanWins + clanLosses === 0 ? 0 : ((clanWins / (clanWins + clanLosses)) * 100).toFixed(1);
 
-  const winRateRanking = [...members]
-    .map((m) => {
-      const w = m.wins; const l = m.losses; const t = w + l;
-      return { ...m, winRate: t === 0 ? 0 : (w / t) * 100 };
-    })
-    .filter((m) => m.wins + m.losses >= 3) 
-    .sort((a, b) => b.winRate - a.winRate);
+  // 🔥 메인 클랜전 기록 기준: 3판 이상 플레이어 대상 승률순 정렬 연산
+  const topTenPlayers = useMemo(() => {
+    return members
+      .map((m) => {
+        const total = m.wins + m.losses;
+        return { ...m, total, winRate: total === 0 ? 0 : (m.wins / total) * 100 };
+      })
+      .filter((m) => m.total >= 3)
+      .sort((a, b) => b.winRate - a.winRate || b.total - a.total)
+      .slice(0, 10);
+  }, [members]);
 
   const totalCount = members.length || 1;
   const terranCount = members.filter(m => m.race === "Terran").length;
@@ -395,7 +394,7 @@ export default function App() {
   return (
     <div className="container" style={{ background: "#090d16", color: "#e2e8f0", fontFamily: "sans-serif", padding: "20px", minHeight: "100vh" }}>
       
-      {/* 💥 호랑이 로고 비주얼 테마 상단 레이아웃 가공 */}
+      {/* 타이틀 배너 */}
       <div className="top-banner" style={{ textAlign: "center", padding: "40px 20px", background: "linear-gradient(to bottom, #000000, #111827)", borderBottom: "3px solid #1f2937", borderRadius: "12px" }}>
         <div style={{ fontSize: "50px", fontWeight: "900", color: "#fff", letterSpacing: "4px", textShadow: "2px 2px 4px #000" }}>THUG CLAN</div>
         <p style={{ color: "#94a3b8", fontWeight: "bold", margin: "10px 0 0 0" }}>義 • TO THE DEATH • 忠誠</p>
@@ -411,7 +410,7 @@ export default function App() {
         <div>📢 THUG OFFICIAL SITE</div>
       </div>
 
-      {/* 💥 실시간 관리자 수정이 연동된 공지사항 위젯 */}
+      {/* 공지사항 */}
       <div className="notice-box" style={{ background: "#1e1b4b", borderLeft: "4px solid #4f46e5", padding: "15px", margin: "15px 0", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <span><strong>📢 공지사항:</strong> {globalNotice}</span>
         {isAdmin && <button onClick={editGlobalNotice} style={{ background: "#4f46e5", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "4px", cursor: "pointer" }}>공지수정</button>}
@@ -421,7 +420,7 @@ export default function App() {
       <div className="navbar" style={{ display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
         {["home", "ladder", "members", "matches", "clanwar", "board"].map((pName) => (
           <button key={pName} onClick={() => setPage(pName)} style={{ flex: 1, padding: "12px", background: page === pName ? "#334155" : "#111827", color: "#fff", border: "1px solid #1f2937", borderRadius: "6px", fontWeight: "bold", cursor: "pointer", textTransform: "uppercase" }}>
-            {pName === "ladder" ? "🏆 래더 시스템" : pName}
+            {pName === "ladder" ? "🏆 래더 시스템" : pName === "clanwar" ? "📊 클랜전 기록실" : pName}
           </button>
         ))}
       </div>
@@ -460,13 +459,32 @@ export default function App() {
       <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "15px", marginBottom: "20px" }}>
         <div style={{ background: "#111827", padding: "20px", borderRadius: "10px", textAlign: "center", border: "1px solid #1f2937" }}><h2>{members.length}</h2><p style={{ color: "#94a3b8", margin: 0 }}>전체 클랜원</p></div>
         <div style={{ background: "#111827", padding: "20px", borderRadius: "10px", textAlign: "center", border: "1px solid #1f2937" }}><h2>{ranking[0]?.elo || 1000}</h2><p style={{ color: "#94a3b8", margin: 0 }}>최고 ELO 명예</p></div>
-        <div style={{ background: "#111827", padding: "20px", borderRadius: "10px", textAlign: "center", border: "1px solid #1f2937" }}><h2>{winRateRanking.length}</h2><p style={{ color: "#94a3b8", margin: 0 }}>정식 랭커 (3전+)</p></div>
+        <div style={{ background: "#111827", padding: "20px", borderRadius: "10px", textAlign: "center", border: "1px solid #1f2937" }}><h2>{topTenPlayers.length}</h2><p style={{ color: "#94a3b8", margin: 0 }}>정식 랭커 (3전+)</p></div>
         <div style={{ background: "#111827", padding: "20px", borderRadius: "10px", textAlign: "center", border: "1px solid #1f2937" }}><h2>{clanWinRate}%</h2><p style={{ color: "#94a3b8", margin: 0 }}>클랜전 전적 ({clanWins}승 {clanLosses}패)</p></div>
       </div>
 
       {/* ==================== HOME VIEW ==================== */}
       {page === "home" && (
         <div>
+          {/* 🔥 [신규 추가] 메인 클랜전 승률 TOP 10 (3판 이상) 위젯 */}
+          <div style={{ background: "#111827", padding: "20px", borderRadius: "12px", marginBottom: "20px", border: "1px solid #ef4444" }}>
+            <h3 style={{ marginTop: 0, color: "#ef4444", display: "flex", alignItems: "center", gap: "8px" }}>
+              🔥 클랜전 승률 TOP 10 <span style={{ fontSize: "12px", color: "#94a3b8" }}>(3판 이상 대상)</span>
+            </h3>
+            {topTenPlayers.length === 0 ? (
+              <p style={{ color: "#94a3b8", fontSize: "14px", textAlign: "center" }}>조건을 충족하는 선수가 없습니다.</p>
+            ) : (
+              <div style={{ display: "grid", gap: "8px" }}>
+                {topTenPlayers.map((m, i) => (
+                  <div key={m.id} style={{ display: "flex", justifyContent: "space-between", background: "#090d16", padding: "10px 15px", borderRadius: "6px", border: "1px solid #334155" }}>
+                    <span><strong style={{ color: i < 3 ? "#ef4444" : "#e2e8f0" }}>{i + 1}위</strong> - {m.nickname} ({m.race})</span>
+                    <span style={{ color: "#38bdf8", fontWeight: "bold" }}>{m.winRate.toFixed(1)}% ({m.wins}승 {m.losses}패)</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* 종족 차트 구성 */}
           <div style={{ background: "#111827", padding: "20px", borderRadius: "12px", marginBottom: "20px", border: "1px solid #1f2937" }}>
             <h3 style={{ marginTop: 0, marginBottom: "15px" }}>📊 종족별 세부 구성 비율</h3>
@@ -568,7 +586,6 @@ export default function App() {
         <div style={{ background: "#111827", padding: "20px", borderRadius: "12px", border: "1px solid #1f2937" }}>
           <h2>🏆 THUG 자체 실시간 래더 매치메이킹 시스템</h2>
           
-          {/* 매치메이킹 대기열 콘솔 내비 */}
           <div style={{ background: "#090d16", padding: "20px", borderRadius: "10px", marginBottom: "20px", border: "1px solid #334155", textAlign: "center" }}>
             <h3>📡 실시간 래더 매칭 콘솔</h3>
             <p>내 매칭 계정: <strong>{members.find(m => m.id === myPlayerId)?.nickname || "선택되지 않음"}</strong></p>
@@ -589,15 +606,25 @@ export default function App() {
             </button>
           </div>
 
-          {/* 래더 레이팅 실시간 랭킹보드 리스트 */}
+          {/* ⚡ 실시간 래더 랭킹보드 (정상 정렬 및 등급 뱃지 전면 세분화 수정) */}
           <h3>🏅 THUG 전체 실시간 래더 랭킹보드</h3>
           <div style={{ display: "grid", gap: "10px" }}>
             {ranking.map((member, index) => {
               const rBadge = getThugRank(member.elo);
               return (
                 <div key={member.id} onClick={() => openPlayerProfile(member)} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#090d16", padding: "12px 20px", borderRadius: "8px", border: "1px solid #1f2937", cursor: "pointer" }}>
-                  <span><strong>{index + 1}위</strong> {member.nickname} ({member.race})</span>
-                  <span style={{ color: rBadge.color, fontWeight: "bold" }}>{rBadge.badge} ({member.elo}점)</span>
+                  <span><strong style={{ color: index < 3 ? "#ef4444" : "#64748b", marginRight: "8px" }}>{index + 1}위</strong> {member.nickname} ({member.race})</span>
+                  <span style={{ 
+                    color: rBadge.color, 
+                    fontWeight: "bold",
+                    padding: "4px 10px",
+                    borderRadius: "4px",
+                    background: rBadge.bg,
+                    border: `1px solid ${rBadge.color}`,
+                    fontSize: "13px"
+                  }}>
+                    {rBadge.badge} ({member.elo}점)
+                  </span>
                 </div>
               );
             })}
@@ -608,31 +635,33 @@ export default function App() {
       {/* ==================== MEMBERS VIEW ==================== */}
       {page === "members" && (
         <div style={{ background: "#111827", padding: "20px", borderRadius: "12px", border: "1px solid #1f2937" }}>
-          <h2>👥 클랜원 관리 및 명단 ({filteredMembers.length}명)</h2>
+          <h2>👥 클랜원 명단 관리</h2>
           {isAdmin && (
-            <div style={{ background: "#090d16", padding: "15px", borderRadius: "8px", marginBottom: "20px", display: "flex", gap: "10px", flexWrap: "wrap" }}>
-              <input placeholder="닉네임" value={newNickname} onChange={(e) => setNewNickname(e.target.value)} style={{ background: "#1e293b", color: "#fff", border: "1px solid #334155", padding: "8px", borderRadius: "4px" }} />
-              <select value={newRace} onChange={(e) => setNewRace(e.target.value)} style={{ background: "#1e293b", color: "#fff", border: "1px solid #334155", padding: "8px", borderRadius: "4px" }}>
-                <option value="Terran">Terran</option>
-                <option value="Zerg">Zerg</option>
-                <option value="Protoss">Protoss</option>
-              </select>
-              <input placeholder="공식티어(예: 스타티어)" value={newTier} onChange={(e) => setNewTier(e.target.value)} style={{ background: "#1e293b", color: "#fff", border: "1px solid #334155", padding: "8px", borderRadius: "4px" }} />
-              <button onClick={addMember} style={{ background: "#10b981", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "4px", cursor: "pointer" }}>신규 등록</button>
+            <div style={{ background: "#090d16", padding: "15px", borderRadius: "8px", marginBottom: "20px", border: "1px solid #334155" }}>
+              <h4>➕ 신규 멤버 등록</h4>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <input placeholder="닉네임" value={newNickname} onChange={(e) => setNewNickname(e.target.value)} style={{ padding: "8px", background: "#1e293b", color: "#fff", border: "1px solid #334155", borderRadius: "4px" }} />
+                <select value={newRace} onChange={(e) => setNewRace(e.target.value)} style={{ padding: "8px", background: "#1e293b", color: "#fff", border: "1px solid #334155", borderRadius: "4px" }}>
+                  <option value="Terran">Terran</option>
+                  <option value="Zerg">Zerg</option>
+                  <option value="Protoss">Protoss</option>
+                </select>
+                <input placeholder="공식 티어 (ex: 스타멸망전티어)" value={newTier} onChange={(e) => setNewTier(e.target.value)} style={{ padding: "8px", background: "#1e293b", color: "#fff", border: "1px solid #334155", borderRadius: "4px" }} />
+                <button onClick={addMember} style={{ background: "#10b981", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "4px", cursor: "pointer" }}>등록</button>
+              </div>
             </div>
           )}
           <div style={{ display: "grid", gap: "10px" }}>
             {filteredMembers.map(m => (
-              <div key={m.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#090d16", padding: "12px", borderRadius: "6px" }}>
-                <span onClick={() => openPlayerProfile(m)} style={{ cursor: "pointer" }}>
-                  <strong>{m.nickname}</strong> ({m.race}) - 티어: {m.tier || "미정"} | 전적: {m.wins}승 {m.losses}패 (ELO: {m.elo})
-                </span>
+              <div key={m.id} style={{ background: "#090d16", padding: "15px", borderRadius: "8px", border: "1px solid #1f2937", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <span style={{ fontSize: "18px", fontWeight: "bold" }}>{m.nickname}</span> 
+                  <span style={{ marginLeft: "8px", color: "#94a3b8" }}>[{m.race}] 티어: {m.tier || "미지정"}</span>
+                </div>
                 {isAdmin && (
-                  <div style={{ display: "flex", gap: "5px" }}>
-                    <button onClick={() => updateScore(m.id, "wins")} style={{ background: "#22c55e", border: "none", color: "#fff", padding: "4px 8px", borderRadius: "4px" }}>+승</button>
-                    <button onClick={() => updateScore(m.id, "losses")} style={{ background: "#ef4444", border: "none", color: "#fff", padding: "4px 8px", borderRadius: "4px" }}>+패</button>
-                    <button onClick={() => editNickname(m)} style={{ background: "#3b82f6", border: "none", color: "#fff", padding: "4px 8px", borderRadius: "4px" }}>수정</button>
-                    <button onClick={() => deleteMember(m.id)} style={{ background: "#64748b", border: "none", color: "#fff", padding: "4px 8px", borderRadius: "4px" }}>삭제</button>
+                  <div style={{ display: "flex", gap: "6px" }}>
+                    <button onClick={() => editNickname(m)} style={{ background: "#fbbf24", color: "#000", border: "none", padding: "4px 8px", borderRadius: "4px" }}>수정</button>
+                    <button onClick={() => deleteMember(m.id)} style={{ background: "#ef4444", color: "#fff", border: "none", padding: "4px 8px", borderRadius: "4px" }}>제명</button>
                   </div>
                 )}
               </div>
@@ -644,46 +673,82 @@ export default function App() {
       {/* ==================== MATCHES VIEW ==================== */}
       {page === "matches" && (
         <div style={{ background: "#111827", padding: "20px", borderRadius: "12px", border: "1px solid #1f2937" }}>
-          <h2>⚔️ 내부 경기 전적 히스토리 전체보기</h2>
+          <h2>⚔️ 내부 리그 전체 기록</h2>
           <div style={{ display: "grid", gap: "8px" }}>
-            {matches.map(m => (
-              <div key={m.id} style={{ background: "#090d16", padding: "12px", borderRadius: "6px" }}>
-                🟢 승자: <strong style={{ color: "#22c55e" }}>{m.winner}</strong> VS 🔴 패자: <strong style={{ color: "#ef4444" }}>{m.loser}</strong> 
-                <span style={{ color: "#64748b", float: "right", fontSize: "13px" }}>{m.date}</span>
+            {matches.map((m) => (
+              <div key={m.id} style={{ background: "#090d16", padding: "12px 15px", borderRadius: "6px", fontSize: "15px" }}>
+                🔵 <strong style={{ color: "#3b82f6" }}>{m.winner}</strong> 승리 vs 🔴 <span style={{ color: "#64748b" }}>{m.loser}</span> 패배 
+                <span style={{ float: "right", color: "#475569", fontSize: "13px" }}>{m.date}</span>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* ==================== CLANWAR VIEW ==================== */}
+      {/* ==================== CLANWAR VIEW (개선 완료) ==================== */}
       {page === "clanwar" && (
         <div style={{ background: "#111827", padding: "20px", borderRadius: "12px", border: "1px solid #1f2937" }}>
-          <h2>⚔️ 공식 클랜전 전적 일람 ({clanWins}승 {clanLosses}패)</h2>
+          <h2>📊 클랜전 종합 기록실</h2>
           {isAdmin && (
-            <div style={{ background: "#090d16", padding: "15px", borderRadius: "8px", marginBottom: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
-              <div style={{ display: "flex", gap: "10px" }}>
-                <input placeholder="상대 클랜명" value={enemyClan} onChange={(e) => setEnemyClan(e.target.value)} style={{ background: "#1e293b", color: "#fff", border: "1px solid #334155", padding: "8px", borderRadius: "4px", flex: 1 }} />
-                <input placeholder="우리 스코어" type="number" value={ourScore} onChange={(e) => setOurScore(e.target.value)} style={{ background: "#1e293b", color: "#fff", border: "1px solid #334155", padding: "8px", borderRadius: "4px", width: "100px" }} />
-                <input placeholder="상대 스코어" type="number" value={enemyScore} onChange={(e) => setEnemyScore(e.target.value)} style={{ background: "#1e293b", color: "#fff", border: "1px solid #334155", padding: "8px", borderRadius: "4px", width: "100px" }} />
+            <div style={{ background: "#090d16", padding: "15px", borderRadius: "8px", marginBottom: "20px", border: "1px solid #334155" }}>
+              <h4>➕ 신규 외부 클랜전 결과 영수증 등록</h4>
+              <div style={{ display: "grid", gap: "10px" }}>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <input placeholder="상대 클랜명" value={enemyClan} onChange={(e) => setEnemyClan(e.target.value)} style={{ padding: "8px", background: "#1e293b", color: "#fff", border: "1px solid #334155", borderRadius: "4px", flex: 2 }} />
+                  <input placeholder="THUG 스코어" type="number" value={ourScore} onChange={(e) => setOurScore(e.target.value)} style={{ padding: "8px", background: "#1e293b", color: "#fff", border: "1px solid #334155", borderRadius: "4px", flex: 1 }} />
+                  <input placeholder="상대 스코어" type="number" value={enemyScore} onChange={(e) => setEnemyScore(e.target.value)} style={{ padding: "8px", background: "#1e293b", color: "#fff", border: "1px solid #334155", borderRadius: "4px", flex: 1 }} />
+                </div>
+                <textarea placeholder="출전 라인업 및 세부 세트별 결과 기록" value={clanWarLineup} onChange={(e) => setClanWarLineup(e.target.value)} style={{ padding: "8px", background: "#1e293b", color: "#fff", border: "1px solid #334155", borderRadius: "4px", minHeight: "60px" }} />
+                <button onClick={addClanWar} style={{ background: "#4f46e5", color: "#fff", border: "none", padding: "10px", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>결과서 대장 등록</button>
               </div>
-              <input placeholder="세부 라인업 정보 기재 (예: 1세트 홍길동 승...)" value={clanWarLineup} onChange={(e) => setClanWarLineup(e.target.value)} style={{ background: "#1e293b", color: "#fff", border: "1px solid #334155", padding: "8px", borderRadius: "4px" }} />
-              <button onClick={addClanWar} style={{ background: "#10b981", color: "#fff", border: "none", padding: "10px", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>클랜전 결과 기록</button>
             </div>
           )}
-          <div style={{ display: "grid", gap: "12px" }}>
-            {clanWars.map(w => (
-              <div key={w.id} style={{ background: "#090d16", padding: "15px", borderRadius: "8px", borderLeft: w.result === "승리" ? "5px solid #22c55e" : "5px solid #ef4444" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold", marginBottom: "6px" }}>
-                  <span>VS {w.enemyClan} 클랜전 ({w.date})</span>
-                  <span style={{ color: w.result === "승리" ? "#22c55e" : "#ef4444" }}>{w.result} ({w.ourScore} : {w.enemyScore})</span>
-                </div>
-                <p style={{ margin: 0, fontSize: "14px", color: "#94a3b8" }}>{w.lineup}</p>
-                {isAdmin && !w.id.startsWith("raw-") && (
-                  <button onClick={() => deleteClanWar(w.id)} style={{ background: "#ef4444", border: "none", color: "#fff", padding: "2px 6px", borderRadius: "4px", marginTop: "10px", cursor: "pointer" }}>삭제</button>
-                )}
-              </div>
-            ))}
+
+          {/* 📊 한눈에 보기 편하게 개선된 클랜전 기록 테이블 구조 */}
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", minWidth: "700px" }}>
+              <thead>
+                <tr style={{ background: "#090d16", color: "#94a3b8", textAlign: "left", borderBottom: "2px solid #1f2937" }}>
+                  <th style={{ padding: "12px" }}>날짜</th>
+                  <th style={{ padding: "12px" }}>상대 매치</th>
+                  <th style={{ padding: "12px", textAlign: "center" }}>스코어</th>
+                  <th style={{ padding: "12px", textAlign: "center" }}>결과</th>
+                  <th style={{ padding: "12px" }}>세부 세트별 라인업 현황</th>
+                  {isAdmin && <th style={{ padding: "12px", textAlign: "center" }}>관리</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {clanWars.map((war) => (
+                  <tr key={war.id} style={{ borderBottom: "1px solid #1f2937", background: "#111827" }}>
+                    <td style={{ padding: "12px", fontSize: "13px", color: "#94a3b8" }}>{war.date}</td>
+                    <td style={{ padding: "12px", fontWeight: "bold" }}>vs {war.enemyClan}</td>
+                    <td style={{ padding: "12px", textAlign: "center", fontWeight: "bold", fontSize: "16px", color: "#fff" }}>
+                      {war.ourScore} : {war.enemyScore}
+                    </td>
+                    <td style={{ padding: "12px", textAlign: "center" }}>
+                      <span style={{
+                        padding: "4px 10px",
+                        borderRadius: "20px",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                        backgroundColor: war.result === "승리" ? "#1e3a8a" : "#7f1d1d",
+                        color: war.result === "승리" ? "#60a5fa" : "#f87171"
+                      }}>
+                        {war.result}
+                      </span>
+                    </td>
+                    <td style={{ padding: "12px", fontSize: "13px", color: "#cbd5e1", maxWidth: "400px", lineHeight: "1.4" }}>
+                      {war.lineup}
+                    </td>
+                    {isAdmin && (
+                      <td style={{ padding: "12px", textAlign: "center" }}>
+                        <button onClick={() => deleteClanWar(war.id)} style={{ background: "#ef4444", border: "none", color: "#fff", padding: "4px 8px", borderRadius: "4px", fontSize: "12px", cursor: "pointer" }}>삭제</button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -691,103 +756,81 @@ export default function App() {
       {/* ==================== BOARD VIEW ==================== */}
       {page === "board" && (
         <div style={{ background: "#111827", padding: "20px", borderRadius: "12px", border: "1px solid #1f2937" }}>
-          <h2>📋 클랜 자유게시판</h2>
-          
-          {selectedPost ? (
-            <div style={{ background: "#090d16", padding: "20px", borderRadius: "8px" }}>
-              <button onClick={() => setSelectedPost(null)} style={{ background: "#475569", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "4px", marginBottom: "15px", cursor: "pointer" }}>⬅️ 목록으로</button>
-              <h3>{selectedPost.title}</h3>
-              <p style={{ color: "#94a3b8", fontSize: "13px" }}>작성자: {selectedPost.author} | {selectedPost.createdAt}</p>
-              <div style={{ whiteSpace: "pre-wrap", margin: "20px 0", minHeight: "100px", borderTop: "1px solid #1f2937", paddingTop: "15px" }}>{selectedPost.content}</div>
-              
-              {/* 댓글 레이아웃 */}
-              <div style={{ borderTop: "1px solid #1f2937", paddingTop: "15px" }}>
-                <h4>댓글 ({selectedPost.comments?.length || 0})</h4>
-                {selectedPost.comments?.map(c => (
-                  <div key={c.id} style={{ background: "#111827", padding: "10px", borderRadius: "6px", marginBottom: "6px", fontSize: "14px" }}>
-                    <strong>{c.author}</strong>: {c.content} <small style={{ color: "#64748b", float: "right" }}>{c.createdAt}</small>
-                  </div>
-                ))}
-                <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
-                  <input placeholder="이름" value={commentAuthor} onChange={(e) => setCommentAuthor(e.target.value)} style={{ background: "#1e293b", color: "#fff", border: "1px solid #334155", padding: "8px", borderRadius: "4px", width: "100px" }} />
-                  <input placeholder="댓글 내용을 작성하세요" value={commentContent} onChange={(e) => setCommentContent(e.target.value)} style={{ background: "#1e293b", color: "#fff", border: "1px solid #334155", padding: "8px", borderRadius: "4px", flex: 1 }} />
-                  <button onClick={addComment} style={{ background: "#3b82f6", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "4px" }}>등록</button>
-                </div>
+          <h2>📋 클랜 전략 공유 및 자유게시판</h2>
+          <div style={{ background: "#090d16", padding: "15px", borderRadius: "8px", marginBottom: "20px" }}>
+            <h4>✍️ 새로운 소통글 작성</h4>
+            <div style={{ display: "grid", gap: "10px" }}>
+              <div style={{ display: "flex", gap: "10px" }}>
+                <input placeholder="작성자명" value={postAuthor} onChange={(e) => setPostAuthor(e.target.value)} style={{ padding: "8px", background: "#1e293b", color: "#fff", border: "1px solid #334155", borderRadius: "4px" }} />
+                <input placeholder="글 제목 입력" value={postTitle} onChange={(e) => setPostTitle(e.target.value)} style={{ padding: "8px", background: "#1e293b", color: "#fff", border: "1px solid #334155", borderRadius: "4px", flex: 1 }} />
               </div>
+              <textarea placeholder="전략 전술 피드백 코멘트 본문 기술" value={postContent} onChange={(e) => setPostContent(e.target.value)} style={{ padding: "8px", background: "#1e293b", color: "#fff", border: "1px solid #334155", borderRadius: "4px", minHeight: "100px" }} />
+              <button onClick={addPost} style={{ background: "#10b981", color: "#fff", border: "none", padding: "10px", borderRadius: "4px", fontWeight: "bold" }}>게시글 릴리즈</button>
             </div>
-          ) : (
-            <div>
-              {/* 게시글 작성 피드 */}
-              <div style={{ background: "#090d16", padding: "15px", borderRadius: "8px", marginBottom: "20px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <input placeholder="작성자 닉네임" value={postAuthor} onChange={(e) => setPostAuthor(e.target.value)} style={{ background: "#1e293b", color: "#fff", border: "1px solid #334155", padding: "8px", borderRadius: "4px", width: "150px" }} />
-                  <input placeholder="글 제목 입력" value={postTitle} onChange={(e) => setPostTitle(e.target.value)} style={{ background: "#1e293b", color: "#fff", border: "1px solid #334155", padding: "8px", borderRadius: "4px", flex: 1 }} />
-                </div>
-                <textarea placeholder="내용을 정성껏 입력해주세요" value={postContent} onChange={(e) => setPostContent(e.target.value)} rows={4} style={{ background: "#1e293b", color: "#fff", border: "1px solid #334155", padding: "8px", borderRadius: "4px", resize: "none" }} />
-                <button onClick={addPost} style={{ background: "#4f46e5", color: "#fff", border: "none", padding: "10px", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}>새 게시글 등록</button>
-              </div>
+          </div>
 
-              {/* 게시글 목록 */}
-              <div style={{ display: "grid", gap: "8px" }}>
-                {posts.map(p => (
-                  <div key={p.id} style={{ background: "#090d16", padding: "12px", borderRadius: "6px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span onClick={() => setSelectedPost(p)} style={{ cursor: "pointer", flex: 1 }}>
-                      📝 <strong>{p.title}</strong> <small style={{ color: "#64748b" }}>({p.comments?.length || 0})</small>
-                      <br />
-                      <small style={{ color: "#94a3b8" }}>by {p.author} | {p.createdAt}</small>
-                    </span>
-                    {(isAdmin || postAuthor === p.author) && (
-                      <button onClick={() => deletePost(p.id)} style={{ background: "#ef4444", border: "none", color: "#fff", padding: "4px 8px", borderRadius: "4px", cursor: "pointer" }}>삭제</button>
-                    )}
-                  </div>
-                ))}
+          <div style={{ display: "grid", gap: "10px" }}>
+            {posts.map(p => (
+              <div key={p.id} style={{ background: "#090d16", padding: "15px", borderRadius: "8px", border: "1px solid #1f2937" }}>
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                  <h4 style={{ margin: 0, color: "#60a5fa", cursor: "pointer" }} onClick={() => setSelectedPost(p)}>{p.title}</h4>
+                  <small style={{ color: "#475569" }}>{p.author} | {p.createdAt}</small>
+                </div>
+                <p style={{ fontSize: "14px", color: "#94a3b8", marginTop: "8px" }}>{p.content}</p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "10px" }}>
+                  <span style={{ fontSize: "12px", color: "#4f46e5" }} onClick={() => setSelectedPost(p)}>💬 댓글 ({p.comments?.length || 0}개)</span>
+                  {isAdmin && <button onClick={() => deletePost(p.id)} style={{ background: "#ef4444", border: "none", color: "#fff", padding: "2px 6px", borderRadius: "4px", fontSize: "12px" }}>삭제</button>}
+                </div>
               </div>
-            </div>
-          )}
+            ))}
+          </div>
         </div>
       )}
 
-      {/* ==================== 💥 POPUP PROFILE MODAL ==================== */}
-      {selectedProfile && (
-        <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-          <div style={{ background: "#111827", padding: "30px", borderRadius: "12px", width: "90%", maxWidth: "450px", border: "1px solid #334155", boxShadow: "0 20px 25px -5px rgba(0,0,0,0.5)" }}>
-            <h3 style={{ marginTop: 0, borderBottom: "1px solid #1f2937", paddingBottom: "10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span>👤 {selectedProfile.nickname} 상세 정보</span>
-              <span style={{ color: getThugRank(selectedProfile.elo).color }}>{getThugRank(selectedProfile.elo).badge}</span>
-            </h3>
-            
-            <div style={{ margin: "15px 0", fontSize: "15px", display: "grid", gap: "8px" }}>
-              <div>종족: <strong>{selectedProfile.race}</strong></div>
-              <div>공식 티어: <strong>{selectedProfile.tier || "미정"}</strong></div>
-              <div>ELO 레이팅: <strong style={{ color: "#3b82f6" }}>{selectedProfile.elo} 점</strong></div>
-              <div>통산 전적: <strong>{selectedProfile.wins}승 {selectedProfile.losses}패</strong> (승률: {selectedProfile.globalWinRate}%)</div>
-            </div>
-
-            <div style={{ background: "#090d16", padding: "12px", borderRadius: "8px", margin: "15px 0" }}>
-              <h4 style={{ margin: "0 0 8px 0", fontSize: "14px", color: "#94a3b8" }}>📊 종족별 분석 데이터</h4>
-              <div style={{ fontSize: "13px", display: "flex", justifyContent: "space-between" }}>
-                <span>vs T: {selectedProfile.vsTerran}%</span>
-                <span>vs Z: {selectedProfile.vsZerg}%</span>
-                <span>vs P: {selectedProfile.vsProtoss}%</span>
+      {/* 댓글 및 상세조회 모달 팝업 가공 */}
+      {selectedPost && (
+        <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.8)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 100 }}>
+          <div style={{ background: "#111827", padding: "25px", borderRadius: "12px", width: "90%", maxWidth: "60px", maxHeight: "80vh", overflowY: "auto", border: "1px solid #334155" }}>
+            <h3>{selectedPost.title}</h3>
+            <p style={{ whiteSpace: "pre-wrap", color: "#cbd5e1" }}>{selectedPost.content}</p>
+            <hr style={{ borderColor: "#1f2937" }} />
+            <h4>댓글 피드백 목록</h4>
+            {selectedPost.comments?.map(c => (
+              <div key={c.id} style={{ background: "#090d16", padding: "8px", borderRadius: "4px", marginBottom: "6px", fontSize: "13px" }}>
+                <strong>{c.author}:</strong> {c.content} <small style={{ color: "#475569", float: "right" }}>{c.createdAt}</small>
+              </div>
+            ))}
+            <div style={{ marginTop: "15px", display: "grid", gap: "6px" }}>
+              <input placeholder="댓글 작성자" value={commentAuthor} onChange={(e) => setCommentAuthor(e.target.value)} style={{ padding: "6px", background: "#1e293b", color: "#fff", border: "1px solid #334155", borderRadius: "4px" }} />
+              <div style={{ display: "flex", gap: "6px" }}>
+                <input placeholder="내용 입력" value={commentContent} onChange={(e) => setCommentContent(e.target.value)} style={{ padding: "6px", background: "#1e293b", color: "#fff", border: "1px solid #334155", borderRadius: "4px", flex: 1 }} />
+                <button onClick={addComment} style={{ background: "#4f46e5", color: "#fff", border: "none", padding: "6px 12px", borderRadius: "4px" }}>등록</button>
               </div>
             </div>
+            <button onClick={() => setSelectedPost(null)} style={{ marginTop: "20px", background: "#475569", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "6px", width: "100%" }}>닫기</button>
+          </div>
+        </div>
+      )}
 
-            <h4 style={{ fontSize: "14px", marginBottom: "8px" }}>⚔️ 최근 경기 기록 (최대 5경기)</h4>
-            <div style={{ display: "grid", gap: "5px", marginBottom: "20px" }}>
-              {selectedProfile.history?.length > 0 ? (
-                selectedProfile.history.map(h => (
-                  <div key={h.id} style={{ background: "#090d16", padding: "8px", borderRadius: "4px", fontSize: "12px" }}>
-                    <span style={{ color: h.winner === selectedProfile.nickname ? "#22c55e" : "#ef4444" }}>
-                      [{h.winner === selectedProfile.nickname ? "WIN" : "LOSE"}]
-                    </span> vs {h.winner === selectedProfile.nickname ? h.loser : h.winner} ({h.date.split(" ")[0]})
-                  </div>
-                ))
-              ) : (
-                <div style={{ color: "#64748b", fontSize: "13px" }}>기록된 내부 리그 경기가 없습니다.</div>
-              )}
+      {/* 개인 이력조회 상세 모달 */}
+      {selectedProfile && (
+        <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.8)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 101 }}>
+          <div style={{ background: "#111827", padding: "25px", borderRadius: "12px", width: "90%", maxWidth: "500px", border: "1px solid #334155" }}>
+            <h3 style={{ margin: "0 0 10px 0" }}>👤 {selectedProfile.nickname} 선수의 비밀 리포트</h3>
+            <p>소속 주종족: <strong>{selectedProfile.race}</strong></p>
+            <p>현재 ELO 등급 레이팅: <span style={{ color: getThugRank(selectedProfile.elo).color, fontWeight: "bold" }}>{getThugRank(selectedProfile.elo).badge} ({selectedProfile.elo} P)</span></p>
+            <p>종합 전적: {selectedProfile.totalGames}전 {selectedProfile.wins}승 {selectedProfile.losses}패 (승률: {selectedProfile.globalWinRate}%)</p>
+            <div style={{ background: "#090d16", padding: "10px", borderRadius: "6px", margin: "10px 0", fontSize: "13px" }}>
+              <strong>상대 종족별 가상 승률 시뮬레이션</strong><br/>
+              VS Terran: {selectedProfile.vsTerran}% | VS Zerg: {selectedProfile.vsZerg}% | VS Protoss: {selectedProfile.vsProtoss}%
             </div>
-
-            <button onClick={() => setSelectedProfile(null)} style={{ width: "100%", background: "#ef4444", color: "#fff", border: "none", padding: "10px", borderRadius: "6px", fontWeight: "bold", cursor: "pointer" }}>닫기</button>
+            <h4>최근 소화한 내부 매치업 이력</h4>
+            {selectedProfile.history?.map((h, i) => (
+              <div key={i} style={{ fontSize: "13px", padding: "4px 0", borderBottom: "1px solid #1f2937" }}>
+                {h.winner === selectedProfile.nickname ? "🟢 승리" : "🔴 패배"} vs {h.winner === selectedProfile.nickname ? h.loser : h.winner} <small style={{ color: "#475569", float: "right" }}>{h.date}</small>
+              </div>
+            ))}
+            <button onClick={() => setSelectedProfile(null)} style={{ marginTop: "20px", background: "#ef4444", color: "#fff", border: "none", padding: "8px 16px", borderRadius: "6px", width: "100%", fontWeight: "bold" }}>메인화면 복귀</button>
           </div>
         </div>
       )}
